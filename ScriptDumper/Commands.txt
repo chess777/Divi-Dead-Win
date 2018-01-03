@@ -1,0 +1,140 @@
+0x0000 - Show text and wait input
+	1t - text to show
+0x0001 - Insert one menu item
+	1d - jump address in script
+	1t - menu item label
+0x0002 - Jump in script command
+	1d - new address in script
+0x0003 - Store value into multiple flags
+	1w - start index
+	1w - end index
+	1w - value
+0x0004 - Process flag math commands
+	1w - flag index
+	1b - flag command
+		0x3D - move			'='
+		0x2B - add			'+'
+		0x2D - subtract		'-'
+		0x2A - multiply		'*'
+		0x2F - divide		'/'
+		0x2E - modulo		'.'
+		0x7C - logical or	'|'
+		0x24 - logical and	'$'
+	1w - flag value
+0x0005 - Wait for key press command
+	0w
+0x0006 - Save position in script & prepare for new text menu
+	0w
+0x0007 - Process main menus and in-game menu
+	0w
+0x000A - Restore saved position
+	0w
+0x000D - Skip 2 bytes and continue (NOP?)
+	1w - skipped
+0x000E - Read flag Index and Value
+0x000F
+	1w - flag index
+	1w - flag value
+0x0010 - Compare flag and jump if condition false
+	1w - flag index
+	1b - comparison command
+		0x3D - equal			'='
+		0x21 - not equal		'!'
+		0x7B - less than		'{'
+		0x7D - greater than		'}'
+	1w - compared value
+	1d - new address in script
+0x0011 - Sleep command
+	1w - sleep time [10ms]
+0x0012 - Sleep and wait for key press command
+	1w - sleep time [10ms]
+0x0013 - Load and display BG command
+	1t - BG file name
+0x0014 - Blit CG with effect command
+	1w - effect
+0x0016 - Load and display CG with transparent color command, remove personages
+	1t - CG name
+0x0017 - Remove image from screen with effect
+	1w - ?
+	1w - effect
+0x0018 - Load script command
+	1t - script name
+0x0019 - Show credits and return to start screen
+	0w
+0x001E - Dim screen to black
+	0w
+0x001F - Dim screen to white
+	0w
+0x0025 - Store random value into a flag
+	1w - flag index
+	1w - range start
+	1w - range end
+0x0026 - Play BG music
+	1t - BG music file name
+0x0028 - Stop BG music playback
+	0w
+0x0029 - Skip cycle command
+	0w
+0x002B - Play wave file (voice)
+	1t - wave file name
+0x0030 - Load pic origin and size
+	1w - origin x
+	1w - origin y
+	1w - width
+	1w - height
+0x0031 - Finished some point in game
+	0w
+0x0032 - Set g_bDWORD_41CB3C false
+	0w
+0x0033 - Set g_bDWORD_41CB3C true
+	0w
+0x0035 - Play wave file (effects)
+	1t - wave file name
+0x0036 - Stop wave playback
+	0w
+0x0037 - Show 2 pics with horizontal blinds effect
+	1t - pic 1 file name
+	1t - pic 2 file name
+0x0038 - Save position in script & prepare for new graphic menu
+	0w
+0x0040 - Load graphical menu item's link in script and bounding rectangle on screen
+	1d - new address in script
+	1w - left
+	1w - top
+	1w - right
+	1w - bottom
+0x0041 - Select from graphical menu
+	0w
+0x0042 - Output string at specified coordinates
+	1w - x
+	1w - y
+	1t - text
+0x0043 - Paint black and restore image
+	0w
+0x0044 - Load picture to buffer right from screen
+	1w - ?
+	1t - pic file name
+0x0045 - ?
+	1d - ?
+0x0046 - Display BG command, clear other parts
+	1t - BG name
+0x0047 - Load and display CG command
+0x0048
+	1t - CG name
+0x0049 - Set required action to 4 - no meaning
+	0w
+0x004A - Blit picture with specified effect from bottom of screen (show clear background)
+	1w - effect
+0x004B - Load and show personage
+	1t - pic file name
+0x004C - Show two personages on screen
+	1t - personage 1 pic file name
+	1t - personage 2 pic file name
+0x004D - Show a light flash, the end of game
+	0w
+0x004E - Slide image I_101A over main image I_101
+	0w
+0x004F - Slide image I_101B over image I_101A
+	0w
+0x0050 - Set current game time
+	1t - time

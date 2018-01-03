@@ -1,0 +1,16 @@
+*.opensdf
+*.sdf
+*.suo
+*.aps
+*.log
+DIVIDEAD_src.c
+*.obj
+*.pch
+*.res
+*.idb
+*.pdb
+*.tlog
+*.lastbuildstate
+*.ipch
+*.exe
+*.ilk

@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DD", "DD\DD.vcxproj", "{97B28C08-BBB7-42B3-8CE4-67E39138CDD7}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ScriptDumper", "ScriptDumper\ScriptDumper.vcxproj", "{4FCA24C8-F0F5-46B7-93D4-4C311F7E55BF}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DD_Tests", "DD_Tests\DD_Tests.vcxproj", "{D2924B56-24E4-4887-9AB5-3523F508D884}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{97B28C08-BBB7-42B3-8CE4-67E39138CDD7}.Debug|Win32.ActiveCfg = Debug|Win32
+		{97B28C08-BBB7-42B3-8CE4-67E39138CDD7}.Debug|Win32.Build.0 = Debug|Win32
+		{97B28C08-BBB7-42B3-8CE4-67E39138CDD7}.Release|Win32.ActiveCfg = Release|Win32
+		{97B28C08-BBB7-42B3-8CE4-67E39138CDD7}.Release|Win32.Build.0 = Release|Win32
+		{4FCA24C8-F0F5-46B7-93D4-4C311F7E55BF}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4FCA24C8-F0F5-46B7-93D4-4C311F7E55BF}.Debug|Win32.Build.0 = Debug|Win32
+		{4FCA24C8-F0F5-46B7-93D4-4C311F7E55BF}.Release|Win32.ActiveCfg = Release|Win32
+		{4FCA24C8-F0F5-46B7-93D4-4C311F7E55BF}.Release|Win32.Build.0 = Release|Win32
+		{D2924B56-24E4-4887-9AB5-3523F508D884}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D2924B56-24E4-4887-9AB5-3523F508D884}.Debug|Win32.Build.0 = Debug|Win32
+		{D2924B56-24E4-4887-9AB5-3523F508D884}.Release|Win32.ActiveCfg = Release|Win32
+		{D2924B56-24E4-4887-9AB5-3523F508D884}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
