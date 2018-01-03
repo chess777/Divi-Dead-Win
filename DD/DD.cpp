@@ -333,6 +333,7 @@ DWORD ReadFileIntoBuffer(const TCHAR* lpFileName, LPVOID lpBuffer)
 
     ReadFile(hFile, lpBuffer, 0x100000u, &dwNumberOfBytesRead, NULL);   // 1 megabyte
     CloseHandle(hFile);
+
     return dwNumberOfBytesRead;
 }
 
@@ -350,6 +351,7 @@ DWORD OverwriteFile(const TCHAR *cptFileName, LPCVOID lpBuffer, DWORD dwNumberOf
 
     WriteFile(hFile, lpBuffer, dwNumberOfBytesToWrite, &dwNumberOfBytesWritten, 0);
     CloseHandle(hFile);
+
     return dwNumberOfBytesWritten;
 }
 
@@ -1482,10 +1484,10 @@ void GetMsgName(UINT uiMsg, TCHAR *ptName)
             wsprintf(ptName, _T("SYS_MSG 0x%04X"), uiMsg);
         }
         if (uiMsg >= WM_USER && uiMsg < WM_APP) {
-            wsprintf(ptName, _T("WM_USER + %d"), uiMsg - WM_USER);
+            wsprintf(ptName, _T("WM_USER + %ud"), uiMsg - WM_USER);
         }
         if (uiMsg >= WM_APP) {
-            wsprintf(ptName, _T("WM_APP + %d"), uiMsg - WM_APP);
+            wsprintf(ptName, _T("WM_APP + %ud"), uiMsg - WM_APP);
         }
 
         break;
@@ -4092,7 +4094,7 @@ bool LoadAndBlitPicToBuf2(int a1, unsigned short iOriginPos, const TCHAR *cptFil
         psBF = (BITMAP_FILE *)g_pvDataBuffer;
     }
 
-    if (psBF->bmfh.bfType != 0x4D42 || psBF->bmi.bmiHeader.biSize != 12 && psBF->bmi.bmiHeader.biSize < 16){
+    if (psBF->bmfh.bfType != 0x4D42 || (psBF->bmi.bmiHeader.biSize != 12 && psBF->bmi.bmiHeader.biSize < 16)){
         return true;
     }
 
@@ -4494,7 +4496,7 @@ short ProcessInGameMenu()
         BitBltWithTranspColor(g_hCDCBuffer1, 48, 16, 240, 36, g_hCDC_MenuGfx, 0, 0, RGB(0, 255, 0));
         for (iYIdx = 0; iYIdx < 5; iYIdx++){
             BitBltWithTranspColor(g_hCDCBuffer1, 48, 23 * iYIdx + 52, 240, 23, g_hCDC_MenuGfx, 0, 36, RGB(0, 255, 0));
-        }while (iYIdx < 5);
+        };
         BitBltWithTranspColor(g_hCDCBuffer1, 48, 23 * iYIdx + 52, 240, 20, g_hCDC_MenuGfx, 0, 60, RGB(0, 255, 0));
         BitBlt(g_hMainDC, 48, 16, 240, 171, g_hCDCBuffer1, 48, 16, SRCCOPY);
 
@@ -4884,7 +4886,7 @@ short ExtraModeMenu()
 
         bUpdate = false;
 
-        while (2){
+        while (2){ //-V654
             g_sIntermediateResult = SelectItemInGraphicalMode();
 
             if (g_sIntermediateResult == -1){           // Exit
@@ -5863,7 +5865,6 @@ int DimmScreenToWhite()
         hBitmap = CreateDIBSection(g_hCDCBuffer1, &sBitmapFile.bmi, 0, (void**)&pucBitmapArray, 0, 0);
         if (hBitmap){
             hCompatibleDC = CreateCompatibleDC(g_hCDCBuffer1);
-            hCompatibleDC = hCompatibleDC;
             hOldBitmap = (HBITMAP)SelectObject(hCompatibleDC, hBitmap);
 
             BitBlt(hCompatibleDC, 0, 0, 640, 480, g_hCDCBuffer1, 0, 0, SRCCOPY);
