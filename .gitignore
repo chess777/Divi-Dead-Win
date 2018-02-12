@@ -1,9 +1,9 @@
+DIVIDEAD_src.c
 *.opensdf
 *.sdf
 *.suo
 *.aps
 *.log
-DIVIDEAD_src.c
 *.obj
 *.pch
 *.res
@@ -14,3 +14,9 @@ DIVIDEAD_src.c
 *.ipch
 *.exe
 *.ilk
+*.db
+*.opendb
+*.db-shm
+*.db-wal
+*.iobj
+*.ipdb
