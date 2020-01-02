@@ -80,7 +80,7 @@ int             g_iOriginY;
 OFFSET_STRUCT   g_psPicOriginPositions[6] = {
     0, 0,           // This part goes to the visible area
     640, 0,         // This part goes to the right from visible area
-    0, 480,     // This part goes to the bottom from visible area
+    0, 480,         // This part goes to the bottom from visible area
     640, 480,       // This part goes to the right and bottom from visible area
 };
 
