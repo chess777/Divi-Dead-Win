@@ -32,8 +32,8 @@ HBITMAP     g_hOldBuf2Bitmap;
 HBITMAP     g_hOld_MenuGFX_Bitmap;
 bool        g_bPaletteSupported;
 int         g_iScreenDepth;
-UINT        g_iMIDIDevsCnt;
-UINT        g_iWaveDevsCnt;
+UINT        g_uMIDIDevsCnt;
+UINT        g_uWaveDevsCnt;
 bool        g_bSoundEnabled;
 bool        g_bVoiceEnabled;
 bool        g_bBgmEnabled;
@@ -2105,10 +2105,10 @@ int InitializeGame(HWND hWnd)
     crWindowFrameColor = GetSysColor(COLOR_WINDOWFRAME);
     SetBkColor(g_hMainDC, crWindowFrameColor);
 
-    g_iMIDIDevsCnt = midiOutGetNumDevs();
-    g_iWaveDevsCnt = waveOutGetNumDevs();
-    g_bBgmEnabled = g_iMIDIDevsCnt != 0;
-    if (g_iWaveDevsCnt != 0){
+    g_uMIDIDevsCnt = midiOutGetNumDevs();
+    g_uWaveDevsCnt = waveOutGetNumDevs();
+    g_bBgmEnabled = g_uMIDIDevsCnt > 0;
+    if (g_uWaveDevsCnt > 0){
         g_bVoiceEnabled = true;
         g_bSoundEnabled = true;
     }
@@ -2198,10 +2198,10 @@ void ShutdownGame()
     _tcsncat_s(g_ptFullFileName, _T("SYS.DAT"), _TRUNCATE);
     OverwriteFile(g_ptFullFileName, &g_sSysFile, sizeof(SysFileStruc));
 
-    if (g_iMIDIDevsCnt){
+    if (g_uMIDIDevsCnt > 0){
         MIDIPlaybackCtrl(g_hMainWindow, eMIDI_StopAndClose, NULL, false);
     }
-    if (g_iWaveDevsCnt){
+    if (g_uWaveDevsCnt > 0){
         WavePlaybackCtrl(NULL, eWAVE_Stop);
     }
     VideoPlaybackCtrl(g_hMainWindow, eVideo_StopAndClose, NULL);
@@ -3962,7 +3962,7 @@ bool PlayMidiFile(const TCHAR *cptFileNameToPlay, bool bLoopMidiPlayback)
         return true;
     }
 
-    if (g_iMIDIDevsCnt && g_bBgmEnabled){
+    if (g_uMIDIDevsCnt > 0 && g_bBgmEnabled){
         return MIDIPlaybackCtrl(g_hMainWindow, eMIDI_OpenAndPlay, cptFileNameToPlay, bLoopMidiPlayback) != 0;
     }
 
@@ -3973,7 +3973,7 @@ bool PlayMidiFile(const TCHAR *cptFileNameToPlay, bool bLoopMidiPlayback)
 // Return: false - success; true - error
 bool StopMidiPlayback()
 {
-    if (!g_iMIDIDevsCnt || !g_bBgmEnabled){
+    if (g_uMIDIDevsCnt == 0 || !g_bBgmEnabled){
         return false;
     }
 
@@ -4478,7 +4478,7 @@ short ProcessInGameMenu()
 
     result = 0;
 
-    if (g_iWaveDevsCnt && g_bSoundEnabled){
+    if (g_uWaveDevsCnt > 0 && g_bSoundEnabled){
         PlaySound(MAKEINTRESOURCE(CHI), GetModuleHandle(NULL), SND_RESOURCE | SND_ASYNC);
     }
 
@@ -4638,13 +4638,13 @@ short ProcessInGameMenu()
             if (g_sIntermediateResult != -1){
                 RestoreImage(48, 16, 390, 286, 48, 16);
                 RestoreImage(16, 400, 64, 64, 16, 400);
-                if (!g_sIntermediateResult && g_iWaveDevsCnt){
+                if (!g_sIntermediateResult && g_uWaveDevsCnt > 0){
                     g_bVoiceEnabled = !g_bVoiceEnabled;
                 }
-                if (g_sIntermediateResult == 1 && g_iWaveDevsCnt){
+                if (g_sIntermediateResult == 1 && g_uWaveDevsCnt > 0){
                     g_bSoundEnabled = !g_bSoundEnabled;
                 }
-                if (g_sIntermediateResult == 2 && g_iMIDIDevsCnt){
+                if (g_sIntermediateResult == 2 && g_uMIDIDevsCnt > 0){
                     g_bBgmEnabled = !g_bBgmEnabled;
                     if (g_bBgmEnabled && g_sGameState.pcBgMusicName[0] != ' '){
                         ConvertMBCSToUni(g_sGameState.pcBgMusicName, g_ptCvtString, CVT_BUF_SIZE);
@@ -4702,7 +4702,7 @@ short ProcessRightMenu()
     int iIdx;
     int iXOffset;
 
-    if (g_iWaveDevsCnt && g_bSoundEnabled)
+    if (g_uWaveDevsCnt > 0 && g_bSoundEnabled)
     {
         PlaySound(MAKEINTRESOURCE(CHI), GetModuleHandle(NULL), SND_RESOURCE | SND_ASYNC);
     }
@@ -5128,7 +5128,7 @@ int ShowCG(const TCHAR *cptCGName)
             if (!(g_bKeyCommand2 & X_KEY_MASK) && (!iResult || g_iMousePosX <= 560 || g_iMousePosX >= 624 || g_iMousePosY <= 400 || g_iMousePosY >= 464))
                 break;
             g_bKeyCommand2 = 0x00;
-            if (g_iWaveDevsCnt && g_bSoundEnabled)
+            if (g_uWaveDevsCnt > 0 && g_bSoundEnabled)
             {
                 PlaySound(MAKEINTRESOURCE(CHI), GetModuleHandle(NULL), SND_RESOURCE | SND_ASYNC);
             }
@@ -5208,7 +5208,7 @@ int ShowCG2(const TCHAR *cptCGName)
             if (!(g_bKeyCommand2 & X_KEY_MASK) && (!iResult || g_iMousePosX <= 560 || g_iMousePosX >= 624 || g_iMousePosY <= 400 || g_iMousePosY >= 464))
                 break;
             g_bKeyCommand2 = 0x00;
-            if (g_iWaveDevsCnt && g_bSoundEnabled)
+            if (g_uWaveDevsCnt > 0 && g_bSoundEnabled)
             {
                 PlaySound(MAKEINTRESOURCE(CHI), GetModuleHandle(NULL), SND_RESOURCE | SND_ASYNC);
             }
@@ -5601,7 +5601,7 @@ short ProcessMainStartMenu()
             g_bTrackingMouse = false;
         }
         g_bKeyCommand2 = 0x00;
-        if (g_iWaveDevsCnt && g_bSoundEnabled)
+        if (g_uWaveDevsCnt > 0 && g_bSoundEnabled)
         {
             PlaySound(MAKEINTRESOURCE(CHI), GetModuleHandle(NULL), SND_RESOURCE | SND_ASYNC);
         }
@@ -5699,11 +5699,11 @@ short ProcessMainStartMenu()
                 else{
                     RestoreImage(48, 16, 390, 286, 48, 16);
                     RestoreImage(16, 400, 64, 64, 16, 400);
-                    if (g_sIntermediateResult == 0 && g_iWaveDevsCnt)// Toggle voice
+                    if (g_sIntermediateResult == 0 && g_uWaveDevsCnt > 0)// Toggle voice
                         g_bVoiceEnabled = !g_bVoiceEnabled;
-                    if (g_sIntermediateResult == 1 && g_iWaveDevsCnt)// Toggle Sound
+                    if (g_sIntermediateResult == 1 && g_uWaveDevsCnt > 0)// Toggle Sound
                         g_bSoundEnabled = !g_bSoundEnabled;
-                    if (g_sIntermediateResult == 2 && g_iMIDIDevsCnt)// Toggle BGM
+                    if (g_sIntermediateResult == 2 && g_uMIDIDevsCnt > 0)// Toggle BGM
                     {
                         g_bBgmEnabled = !g_bBgmEnabled;
                         if (g_bBgmEnabled && g_sGameState.pcBgMusicName[0] != ' '){
