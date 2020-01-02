@@ -200,12 +200,12 @@ HANDLE              g_hCreateDoneEvent;
 
 int ConvertMBCSToUni(const char *cpcMBString, wchar_t *pwcUString, int iUStringSize)
 {
-    return MultiByteToWideChar(932 /* Shift-JIS */, 0, cpcMBString, -1, pwcUString, iUStringSize);
+    return MultiByteToWideChar(SHIFT_JIS_CP, 0, cpcMBString, -1, pwcUString, iUStringSize);
 }
 
 int ConvertUniToMBCS(const wchar_t *cpwUString, char *pcMBString, int iMBStringSize)
 {
-    return WideCharToMultiByte(932 /* Shift-JIS */, 0, cpwUString, -1, pcMBString, iMBStringSize, NULL, NULL);
+    return WideCharToMultiByte(SHIFT_JIS_CP, 0, cpwUString, -1, pcMBString, iMBStringSize, NULL, NULL);
 }
 
 ATOM RegisterClass(HINSTANCE hInstance)

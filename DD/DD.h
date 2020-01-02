@@ -2,6 +2,8 @@
 
 #include "Resource.h"
 
+#define SHIFT_JIS_CP    (932)
+
 #define GET_BYTE(pBase, lOffset)        (*(BYTE *)((BYTE *)(pBase) + (lOffset)))
 #define GET_WORD(pBase, lOffset)        (*(WORD *)((BYTE *)(pBase) + (lOffset)))
 #define GET_DWORD(pBase, lOffset)       (*(DWORD *)((BYTE *)(pBase) + (lOffset)))
