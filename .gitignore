@@ -20,3 +20,4 @@ DIVIDEAD_src.c
 *.db-wal
 *.iobj
 *.ipdb
+*.vcxproj.FileListAbsolute.txt
