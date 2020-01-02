@@ -1628,10 +1628,10 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
         break;
 
     case WM_CREATE:
-        HDC hMainDC = GetDC(hWND);
-        g_bPaletteSupported = (GetDeviceCaps(hMainDC, RASTERCAPS) & RC_PALETTE) != FALSE;
-        g_iScreenDepth = GetDeviceCaps(hMainDC, BITSPIXEL);
-        ReleaseDC(hWND, hMainDC);
+        HDC hDC = GetDC(hWND);
+        g_bPaletteSupported = (GetDeviceCaps(hDC, RASTERCAPS) & RC_PALETTE) != FALSE;
+        g_iScreenDepth = GetDeviceCaps(hDC, BITSPIXEL);
+        ReleaseDC(hWND, hDC);
         if (InitializeGame(hWND)){
             ChangeDisplaySettings(NULL, 0);
             DestroyWindow(hWND);
