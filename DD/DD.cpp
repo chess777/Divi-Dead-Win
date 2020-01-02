@@ -20,10 +20,10 @@ bool        g_bScreenUpdatedOrMouseMoved;
 bool        g_bResetMenuSelection;
 HWND        g_hMainWindow;
 bool        g_bShowingFullScrMenu;
-HDC         g_hMainDC;
-HDC         g_hCDCBuffer1;
-HDC         g_hCDCBuffer2;
-HDC         g_hCDC_MenuGfx;
+HDC         g_hMainDc;
+HDC         g_hDcBuffer1;
+HDC         g_hDcBuffer2;
+HDC         g_hDcMenuGfx;
 HBITMAP     g_hBuf1Bitmap;
 HBITMAP     g_hBuf2Bitmap;
 HBITMAP     g_hMenuGFX_Bitmap;
@@ -41,7 +41,7 @@ void        *g_pvScriptBuffer;
 void        *g_pvDataBuffer;
 void        *g_pvSoundBuffer;
 HFONT       g_hFont;
-HFONT       g_hMainDCOldFont;
+HFONT       g_hMainDcOldFont;
 HFONT       g_hBuf1OldFont;
 TCHAR       g_ptSaveFolder[MAX_PATH];
 TCHAR       g_ptWorkingDir[MAX_PATH];
@@ -377,7 +377,7 @@ DWORD WriteToFile(const TCHAR *cptFileName, LPCVOID lpBuffer, DWORD nNumberOfByt
 void InitPalette()
 {
     int         iIdx;
-    HDC         hDC;
+    HDC         hDc;
     HPALETTE    hPal;
     HPALETTE    hOldPal;
     LOGPALETTE  *psPal;
@@ -395,19 +395,19 @@ void InitPalette()
         psPal->palPalEntry[iIdx].peFlags = PC_NOCOLLAPSE;
     }
 
-    hDC = GetDC(NULL);
+    hDc = GetDC(NULL);
     hPal = CreatePalette(psPal);
 
     if (hPal){
-        hOldPal = SelectPalette(hDC, hPal, FALSE);
-        RealizePalette(hDC);
-        SelectPalette(hDC, hOldPal, FALSE);
+        hOldPal = SelectPalette(hDc, hPal, FALSE);
+        RealizePalette(hDc);
+        SelectPalette(hDc, hOldPal, FALSE);
         DeleteObject(hPal);
     }
 
     free(psPal);
 
-    ReleaseDC(NULL, hDC);
+    ReleaseDC(NULL, hDc);
 }
 
 //----- (00401440) --------------------------------------------------------
@@ -1621,17 +1621,17 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
         BeginPaint(hWND, &sPaint);
         EndPaint(hWND, &sPaint);
         if (!g_bShowingFullScrMenu){
-            BitBlt(g_hMainDC, 0, 0, g_iWindowSizeX, g_iWindowSizeY, g_hCDCBuffer1, 0, 0, SRCCOPY);
+            BitBlt(g_hMainDc, 0, 0, g_iWindowSizeX, g_iWindowSizeY, g_hDcBuffer1, 0, 0, SRCCOPY);
             g_bScreenUpdatedOrMouseMoved = true;
             g_bResetMenuSelection = true;
         }
         break;
 
     case WM_CREATE:
-        HDC hDC = GetDC(hWND);
-        g_bPaletteSupported = (GetDeviceCaps(hDC, RASTERCAPS) & RC_PALETTE) != FALSE;
-        g_iScreenDepth = GetDeviceCaps(hDC, BITSPIXEL);
-        ReleaseDC(hWND, hDC);
+        HDC hDc = GetDC(hWND);
+        g_bPaletteSupported = (GetDeviceCaps(hDc, RASTERCAPS) & RC_PALETTE) != FALSE;
+        g_iScreenDepth = GetDeviceCaps(hDc, BITSPIXEL);
+        ReleaseDC(hWND, hDc);
         if (InitializeGame(hWND)){
             ChangeDisplaySettings(NULL, 0);
             DestroyWindow(hWND);
@@ -1678,10 +1678,10 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
         memcpy(g_pcFLIST, g_pvDataBuffer, FLIST_ENTRY_COUNT * sizeof(ArhiveFileEntry));
 
         LoadAndBlitPicToBuf2(0, eMainScreen, _T("WAKU_P"));                             // Load menu images
-        BitBlt(g_hCDC_MenuGfx, 0, 0, GAME_SCREEN_SIZE_X, GAME_SCREEN_SIZE_Y, g_hCDCBuffer2, 0, 0, SRCCOPY);
+        BitBlt(g_hDcMenuGfx, 0, 0, GAME_SCREEN_SIZE_X, GAME_SCREEN_SIZE_Y, g_hDcBuffer2, 0, 0, SRCCOPY);
         SetRect(&sRect, 0, 0, GAME_SCREEN_SIZE_X, GAME_SCREEN_SIZE_Y);
         hBlackBrush = (HBRUSH)GetStockObject(BLACK_BRUSH);
-        FillRect(g_hCDCBuffer2, &sRect, hBlackBrush);                               // Paint main part of screen black
+        FillRect(g_hDcBuffer2, &sRect, hBlackBrush);                               // Paint main part of screen black
 
         g_iRequiredAction = eShowIntro;
 
@@ -1714,7 +1714,7 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
             if (!g_bWindowModeReal){
                 g_bShowingFullScrMenu = false;
                 SetMenu(hWND, NULL);
-                SetupOrigin(hWND, g_hMainDC);
+                SetupOrigin(hWND, g_hMainDc);
             }
             g_bCtrlPressed = 0;
             g_bShiftPressed = 0;
@@ -1753,7 +1753,7 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
             g_uiWindowStyle = WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
             SetWindowLong(hWND, GWL_STYLE, g_uiWindowStyle);
             SetMenu(hWND, g_hMenu);
-            SetupOrigin(hWND, g_hMainDC);
+            SetupOrigin(hWND, g_hMainDc);
             SetWindowSize(hWND, g_iWindowSizeX, g_iWindowSizeY);
             CenterTheWindow(hWND);
             ShowWindow(hWND, SW_SHOWNORMAL);
@@ -1772,7 +1772,7 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
             UpdateWindow(hWND);
             SetWindowSize(hWND, g_iWindowSizeX, g_iWindowSizeY);
             SetMenu(hWND, NULL);
-            SetupOrigin(hWND, g_hMainDC);
+            SetupOrigin(hWND, g_hMainDc);
         }
         break;
 
@@ -1841,13 +1841,13 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
                 if (g_bShowingFullScrMenu){
                     g_bShowingFullScrMenu = false;
                     SetMenu(hWND, NULL);
-                    SetupOrigin(hWND, g_hMainDC);
+                    SetupOrigin(hWND, g_hMainDc);
                     g_bResetMenuSelection = true;
                 }
                 else if (g_iMousePosY < SHOW_MENU_MOUSE_POS_Y && g_bTrackingMouse && GetActiveWindow()){    // Show menu in full screen mode
                     g_bShowingFullScrMenu = true;
                     SetMenu(hWND, g_hMenu);
-                    SetupOrigin(hWND, g_hMainDC);
+                    SetupOrigin(hWND, g_hMainDc);
                 }
             }
         }
@@ -1861,7 +1861,7 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
             if (g_iCloseWindowResponce != IDYES){
                 break;
             }
-            SetupOrigin(hWND, g_hMainDC);
+            SetupOrigin(hWND, g_hMainDc);
             ChangeDisplaySettings(NULL, 0);
             DestroyWindow(hWND);
         }
@@ -1879,7 +1879,7 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
         if (!g_bWindowModeReal){
             g_bShowingFullScrMenu = false;
             SetMenu(hWND, NULL);
-            SetupOrigin(hWND, g_hMainDC);
+            SetupOrigin(hWND, g_hMainDc);
         }
         DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_DIALOG2), hWND, (DLGPROC)Dialog_Func, 0);
         break;
@@ -2000,7 +2000,7 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
             if (!g_bWindowModeReal){
                 g_bShowingFullScrMenu = false;
                 SetMenu(hWND, NULL);
-                SetupOrigin(hWND, g_hMainDC);
+                SetupOrigin(hWND, g_hMainDc);
             }
             WinHelp(hWND, _T("DIVIDEAD.HLP"), HH_SYNC, NULL);
             break;
@@ -2021,7 +2021,7 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
             if (!g_bWindowModeReal){
                 g_bShowingFullScrMenu = false;
                 SetMenu(hWND, NULL);
-                SetupOrigin(hWND, g_hMainDC);
+                SetupOrigin(hWND, g_hMainDc);
             }
             g_iCloseWindowResponce = MessageBox(hWND, _T("Do you wish to quit?"), _T("DIVI-DEAD C'sWARE"), MB_YESNO);
             g_wKeyCommand = EMPTY_MASK;
@@ -2029,7 +2029,7 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
             if (g_iCloseWindowResponce != IDYES){
                 break;
             }
-            SetupOrigin(hWND, g_hMainDC);
+            SetupOrigin(hWND, g_hMainDc);
             ChangeDisplaySettings(NULL, 0);
             DestroyWindow(hWND);
             break;
@@ -2070,40 +2070,40 @@ int InitializeGame(HWND hWnd)
     DWORD       dwStartTime;
 
     SetMenu(hWnd, g_hMenu);
-    g_hMainDC = GetWindowDC(hWnd);
-    SetupOrigin(hWnd, g_hMainDC);
+    g_hMainDc = GetWindowDC(hWnd);
+    SetupOrigin(hWnd, g_hMainDc);
 
-    g_hBuf1Bitmap = CreateCompatibleBitmap(g_hMainDC, g_iWindowSizeX, g_iWindowSizeY);
-    g_hCDCBuffer1 = CreateCompatibleDC(g_hMainDC);
-    g_hOldBuf1Bitmap = (HBITMAP)SelectObject(g_hCDCBuffer1, g_hBuf1Bitmap);
+    g_hBuf1Bitmap = CreateCompatibleBitmap(g_hMainDc, g_iWindowSizeX, g_iWindowSizeY);
+    g_hDcBuffer1 = CreateCompatibleDC(g_hMainDc);
+    g_hOldBuf1Bitmap = (HBITMAP)SelectObject(g_hDcBuffer1, g_hBuf1Bitmap);
 
-    g_hBuf2Bitmap = CreateCompatibleBitmap(g_hMainDC, 2 * g_iWindowSizeX, 2 * g_iWindowSizeY);
-    g_hCDCBuffer2 = CreateCompatibleDC(g_hMainDC);
-    g_hOldBuf2Bitmap = (HBITMAP)SelectObject(g_hCDCBuffer2, g_hBuf2Bitmap);
+    g_hBuf2Bitmap = CreateCompatibleBitmap(g_hMainDc, 2 * g_iWindowSizeX, 2 * g_iWindowSizeY);
+    g_hDcBuffer2 = CreateCompatibleDC(g_hMainDc);
+    g_hOldBuf2Bitmap = (HBITMAP)SelectObject(g_hDcBuffer2, g_hBuf2Bitmap);
 
-    g_hMenuGFX_Bitmap = CreateCompatibleBitmap(g_hMainDC, g_iWindowSizeX, g_iWindowSizeY);
-    g_hCDC_MenuGfx = CreateCompatibleDC(g_hMainDC);
-    g_hOld_MenuGFX_Bitmap = (HBITMAP)SelectObject(g_hCDC_MenuGfx, g_hMenuGFX_Bitmap);
+    g_hMenuGFX_Bitmap = CreateCompatibleBitmap(g_hMainDc, g_iWindowSizeX, g_iWindowSizeY);
+    g_hDcMenuGfx = CreateCompatibleDC(g_hMainDc);
+    g_hOld_MenuGFX_Bitmap = (HBITMAP)SelectObject(g_hDcMenuGfx, g_hMenuGFX_Bitmap);
 
-    SetStretchBltMode(g_hMainDC, COLORONCOLOR);
-    SetStretchBltMode(g_hCDCBuffer1, COLORONCOLOR);
-    SetStretchBltMode(g_hCDCBuffer2, COLORONCOLOR);
+    SetStretchBltMode(g_hMainDc, COLORONCOLOR);
+    SetStretchBltMode(g_hDcBuffer1, COLORONCOLOR);
+    SetStretchBltMode(g_hDcBuffer2, COLORONCOLOR);
 
-    PatBlt(g_hMainDC, 0, 0, g_iWindowSizeX, g_iWindowSizeY, BLACKNESS);
-    PatBlt(g_hCDCBuffer1, 0, 0, g_iWindowSizeX, g_iWindowSizeY, BLACKNESS);
-    PatBlt(g_hCDCBuffer2, 0, 0, g_iWindowSizeX, g_iWindowSizeY, BLACKNESS);
+    PatBlt(g_hMainDc, 0, 0, g_iWindowSizeX, g_iWindowSizeY, BLACKNESS);
+    PatBlt(g_hDcBuffer1, 0, 0, g_iWindowSizeX, g_iWindowSizeY, BLACKNESS);
+    PatBlt(g_hDcBuffer2, 0, 0, g_iWindowSizeX, g_iWindowSizeY, BLACKNESS);
 
-    SetTextColor(g_hMainDC, RGB(0, 0, 0));
-    SetTextColor(g_hCDCBuffer1, RGB(0, 0, 0));
-    SetTextColor(g_hCDCBuffer2, RGB(0, 0, 0));
+    SetTextColor(g_hMainDc, RGB(0, 0, 0));
+    SetTextColor(g_hDcBuffer1, RGB(0, 0, 0));
+    SetTextColor(g_hDcBuffer2, RGB(0, 0, 0));
 
-    SetBkMode(g_hMainDC, TRANSPARENT);
-    SetBkMode(g_hCDCBuffer1, TRANSPARENT);
-    SetBkMode(g_hCDCBuffer2, TRANSPARENT);
-    SetBkMode(g_hCDC_MenuGfx, TRANSPARENT);
+    SetBkMode(g_hMainDc, TRANSPARENT);
+    SetBkMode(g_hDcBuffer1, TRANSPARENT);
+    SetBkMode(g_hDcBuffer2, TRANSPARENT);
+    SetBkMode(g_hDcMenuGfx, TRANSPARENT);
 
     crWindowFrameColor = GetSysColor(COLOR_WINDOWFRAME);
-    SetBkColor(g_hMainDC, crWindowFrameColor);
+    SetBkColor(g_hMainDc, crWindowFrameColor);
 
     g_uMIDIDevsCnt = midiOutGetNumDevs();
     g_uWaveDevsCnt = waveOutGetNumDevs();
@@ -2140,8 +2140,8 @@ int InitializeGame(HWND hWnd)
     sLF.lfPitchAndFamily = FIXED_PITCH;
     _tcscpy_s(sLF.lfFaceName, _T("System"));
     g_hFont = CreateFontIndirect(&sLF);
-    g_hBuf1OldFont = (HFONT)SelectObject(g_hCDCBuffer1, g_hFont);
-    g_hMainDCOldFont = (HFONT)SelectObject(g_hMainDC, g_hFont);
+    g_hBuf1OldFont = (HFONT)SelectObject(g_hDcBuffer1, g_hFont);
+    g_hMainDcOldFont = (HFONT)SelectObject(g_hMainDc, g_hFont);
 
     InitPalette();
 
@@ -2194,9 +2194,10 @@ int InitializeGame(HWND hWnd)
 //----- (00402F90) --------------------------------------------------------
 void ShutdownGame()
 {
-    _tcscpy_s(g_ptFullFileName, g_ptSaveFolder);
-    _tcsncat_s(g_ptFullFileName, _T("SYS.DAT"), _TRUNCATE);
-    OverwriteFile(g_ptFullFileName, &g_sSysFile, sizeof(SysFileStruc));
+    TCHAR lpcFilePath[MAX_PATH];
+    _tcscpy_s(lpcFilePath, g_ptSaveFolder);
+    _tcsncat_s(lpcFilePath, _T("SYS.DAT"), _TRUNCATE);
+    OverwriteFile(lpcFilePath, &g_sSysFile, sizeof(SysFileStruc));
 
     if (g_uMIDIDevsCnt > 0){
         MIDIPlaybackCtrl(g_hMainWindow, eMIDI_StopAndClose, NULL, false);
@@ -2206,8 +2207,8 @@ void ShutdownGame()
     }
     VideoPlaybackCtrl(g_hMainWindow, eVideo_StopAndClose, NULL);
 
-    SelectObject(g_hMainDC, g_hMainDCOldFont);
-    DeleteObject(SelectObject(g_hCDCBuffer1, g_hBuf1OldFont));
+    SelectObject(g_hMainDc, g_hMainDcOldFont);
+    DeleteObject(SelectObject(g_hDcBuffer1, g_hBuf1OldFont));
 
     if (g_pvDataBuffer){
         free(g_pvDataBuffer);
@@ -2219,12 +2220,12 @@ void ShutdownGame()
         free(g_pvSoundBuffer);
     }
 
-    DeleteObject(SelectObject(g_hCDCBuffer1, g_hOldBuf1Bitmap));
-    DeleteObject(SelectObject(g_hCDCBuffer2, g_hOldBuf2Bitmap));
-    DeleteObject(SelectObject(g_hCDC_MenuGfx, g_hOld_MenuGFX_Bitmap));
-    DeleteDC(g_hCDCBuffer1);
-    DeleteDC(g_hCDCBuffer2);
-    DeleteDC(g_hCDC_MenuGfx);
+    DeleteObject(SelectObject(g_hDcBuffer1, g_hOldBuf1Bitmap));
+    DeleteObject(SelectObject(g_hDcBuffer2, g_hOldBuf2Bitmap));
+    DeleteObject(SelectObject(g_hDcMenuGfx, g_hOld_MenuGFX_Bitmap));
+    DeleteDC(g_hDcBuffer1);
+    DeleteDC(g_hDcBuffer2);
+    DeleteDC(g_hDcMenuGfx);
 }
 
 //----- (00403110) --------------------------------------------------------
@@ -2462,7 +2463,7 @@ MCIERROR VideoPlaybackCtrl(HWND hWnd, int iCommand, const TCHAR *cptFileToPlay)
 
 //----- (00403700) --------------------------------------------------------
 // return: number of characters printed
-int OutputString(HDC hDC1, HDC hDC2, int iX, int iY, int iMaxLen, TCHAR *pcString, DWORD dwSleepTimeBetweenChars)
+int OutputString(HDC hDc1, HDC hDc2, int iX, int iY, int iMaxLen, TCHAR *pcString, DWORD dwSleepTimeBetweenChars)
 {
     int         iStrLen;
     int         iIdx;
@@ -2560,16 +2561,16 @@ int OutputString(HDC hDC1, HDC hDC2, int iX, int iY, int iMaxLen, TCHAR *pcStrin
                 ptStringToDraw[0] = _T('"');
             }
 
-            TextOut(hDC1, iCursorX, iCursorY, ptStringToDraw, 1);
-            if (hDC2 != hDC1){
-                TextOut(hDC2, iCursorX, iCursorY, ptStringToDraw, 1);
+            TextOut(hDc1, iCursorX, iCursorY, ptStringToDraw, 1);
+            if (hDc2 != hDc1){
+                TextOut(hDc2, iCursorX, iCursorY, ptStringToDraw, 1);
             }
             ++iStrLen;
             ++iCharsPrinted;
             /*}
             else{       // Needed only for Shift-JIS
-            TextOut(hCDC, iX, y + iLineNumber * iLineHeight, &g_ptStrings[iIdx], 2);
-            TextOut(hDC, iX, iY, &g_ptStrings[iIdx], 2);
+            TextOut(hDc1, iX, y + iLineNumber * iLineHeight, &g_ptStrings[iIdx], 2);
+            TextOut(hDc2, iX, iY, &g_ptStrings[iIdx], 2);
             iIdx++;
             iStrLen += 2;
             iCharsPrinted += 2;
@@ -2611,10 +2612,10 @@ WORD WaitForKeyPress()
 //----- (00403A40) --------------------------------------------------------
 void BlitWaitingAnimation()
 {
-    BitBlt(g_hMainDC,
+    BitBlt(g_hMainDc,
         g_sTextWindowPos.x + FLIP_BOOK_POS_X, g_sTextWindowPos.y + (MAX_TEXT_LINE_COUNT - 1) * g_iStringHeight + 4,
         FLIP_BOOK_SIZE_X, FLIP_BOOK_SIZE_Y,
-        g_hCDC_MenuGfx,
+        g_hDcMenuGfx,
         FLIP_BOOK_SIZE_X * (g_iBookProgressIdx / 3), FLIP_BOOK_OFFSET_Y, SRCCOPY);
 
     g_iBookProgressIdx = (g_iBookProgressIdx + 1) % 21;
@@ -2711,10 +2712,10 @@ DWORD WINAPI MainGameThreadProc(LPVOID lpParameter)
             _tcsncpy_s(g_ptScriptName, MAX_PATH, g_ptCvtString, CVT_BUF_SIZE);
 
             g_crColor = RGB(0xFF, 0xFF, 0xFF);
-            SetTextColor(g_hMainDC, g_crColor);
-            SetTextColor(g_hCDCBuffer1, g_crColor);
+            SetTextColor(g_hMainDc, g_crColor);
+            SetTextColor(g_hDcBuffer1, g_crColor);
             g_iTextLineHeight = 16;
-            OutputString(g_hCDCBuffer1, g_hMainDC, g_sTextWindowPos.x, g_sTextWindowPos.y, 46, g_ptScriptName, g_iSleepTimeBetweenChars);
+            OutputString(g_hDcBuffer1, g_hMainDc, g_sTextWindowPos.x, g_sTextWindowPos.y, 46, g_ptScriptName, g_iSleepTimeBetweenChars);
 
             g_bWaitingUserInput = true;
             g_iBookProgressIdx = 0;
@@ -3276,11 +3277,11 @@ DWORD WINAPI MainGameThreadProc(LPVOID lpParameter)
 
         case 0x0041:    // Select from graphical menu
             g_crColor = RGB(255, 255, 255);
-            SetTextColor(g_hMainDC, g_crColor);
-            SetTextColor(g_hCDCBuffer1, g_crColor);
+            SetTextColor(g_hMainDc, g_crColor);
+            SetTextColor(g_hDcBuffer1, g_crColor);
 
             g_iTextLineHeight = 16;
-            OutputString(g_hCDCBuffer1, g_hMainDC, g_sTextWindowPos.x, g_sTextWindowPos.y, 46, _T("Choose destination"), 0);
+            OutputString(g_hDcBuffer1, g_hMainDc, g_sTextWindowPos.x, g_sTextWindowPos.y, 46, _T("Choose destination"), 0);
 
             g_iCurrPosInScript = g_iSavedPosInScript;
 
@@ -3305,14 +3306,14 @@ DWORD WINAPI MainGameThreadProc(LPVOID lpParameter)
             _tcsncpy_s(g_ptScriptName, MAX_PATH, g_ptCvtString, CVT_BUF_SIZE);
 
             g_crColor = RGB(255, 255, 255);
-            SetTextColor(g_hMainDC, g_crColor);
-            SetTextColor(g_hCDCBuffer1, g_crColor);
+            SetTextColor(g_hMainDc, g_crColor);
+            SetTextColor(g_hDcBuffer1, g_crColor);
             g_iTextLineHeight = 16;
-            OutputString(g_hCDCBuffer1, g_hMainDC, sFlagIdx, sFlagVal, 46, g_ptScriptName, 0);
+            OutputString(g_hDcBuffer1, g_hMainDc, sFlagIdx, sFlagVal, 46, g_ptScriptName, 0);
             continue;
 
         case 0x0043:    // Paint black and restore image
-            PatBlt(g_hCDCBuffer2, sFlagIdx, sFlagVal, 414, 3 * g_iStringHeight, BLACKNESS);
+            PatBlt(g_hDcBuffer2, sFlagIdx, sFlagVal, 414, 3 * g_iStringHeight, BLACKNESS);
             RestoreImage(sFlagIdx, sFlagVal, 432, 3 * g_iStringHeight, sFlagIdx, sFlagVal);
             continue;
 
@@ -3519,17 +3520,17 @@ DWORD WINAPI MainGameThreadProc(LPVOID lpParameter)
             strcpy_s(g_sGameState.pcFgOverlayName, 32, " ");
 
             LoadAndBlitPicToBuf2(0, eMainScreen, _T("I_101A"));
-            BitBlt(g_hCDCBuffer2, 32, 384, 576, 376, g_hCDCBuffer2, 32, 8, SRCCOPY);
+            BitBlt(g_hDcBuffer2, 32, 384, 576, 376, g_hDcBuffer2, 32, 8, SRCCOPY);
             LoadAndBlitPicToBuf2(0, eMainScreen, _T("I_101"));
 
             strcpy_s(g_sGameState.pcFgPictureName, 32, "I_101A");
             for (iIdx1 = 8; iIdx1 <= 384; iIdx1 += 2){
-                BitBlt(g_hCDCBuffer1, 32, 8, 576, 376, g_hCDCBuffer2, 32, iIdx1, SRCCOPY);
-                BitBlt(g_hMainDC, 32, 8, 576, 376, g_hCDCBuffer1, 32, 8, SRCCOPY);
+                BitBlt(g_hDcBuffer1, 32, 8, 576, 376, g_hDcBuffer2, 32, iIdx1, SRCCOPY);
+                BitBlt(g_hMainDc, 32, 8, 576, 376, g_hDcBuffer1, 32, 8, SRCCOPY);
                 Sleep(10);
             }
-            BitBlt(g_hCDCBuffer2, 32, 8, 576, 376, g_hCDCBuffer2, 32, 384, SRCCOPY);
-            BitBlt(g_hCDCBuffer2, 0, 384, 640, 96, g_hCDCBuffer2, 640, 480 + 384, SRCCOPY);
+            BitBlt(g_hDcBuffer2, 32, 8, 576, 376, g_hDcBuffer2, 32, 384, SRCCOPY);
+            BitBlt(g_hDcBuffer2, 0, 384, 640, 96, g_hDcBuffer2, 640, 480 + 384, SRCCOPY);
             continue;
 
         case 0x004F:    // Slide image I_101B over image I_101A
@@ -3538,16 +3539,16 @@ DWORD WINAPI MainGameThreadProc(LPVOID lpParameter)
             strcpy_s(g_sGameState.pcFgOverlayName, 32, " ");
 
             LoadAndBlitPicToBuf2(0, eMainScreen, _T("I_101A"));
-            BitBlt(g_hCDCBuffer2, 32, 384, 576, 376, g_hCDCBuffer2, 32, 8, SRCCOPY);
+            BitBlt(g_hDcBuffer2, 32, 384, 576, 376, g_hDcBuffer2, 32, 8, SRCCOPY);
             LoadAndBlitPicToBuf2(0, eMainScreen, _T("I_101B"));
 
             strcpy_s(g_sGameState.pcFgPictureName, 32, "I_101B");
             for (iIdx1 = 384; iIdx1 >= 8; iIdx1 -= 2){
-                BitBlt(g_hCDCBuffer1, 32, 8, 576, 376, g_hCDCBuffer2, 32, iIdx1, SRCCOPY);
-                BitBlt(g_hMainDC, 32, 8, 576, 376, g_hCDCBuffer1, 32, 8, SRCCOPY);
+                BitBlt(g_hDcBuffer1, 32, 8, 576, 376, g_hDcBuffer2, 32, iIdx1, SRCCOPY);
+                BitBlt(g_hMainDc, 32, 8, 576, 376, g_hDcBuffer1, 32, 8, SRCCOPY);
                 Sleep(10);
             }
-            BitBlt(g_hCDCBuffer2, 0, 384, 640, 96, g_hCDCBuffer2, 640, 480 + 384, SRCCOPY);
+            BitBlt(g_hDcBuffer2, 0, 384, 640, 96, g_hDcBuffer2, 640, 480 + 384, SRCCOPY);
             continue;
 
         case 0x0050:    // Set current game time
@@ -3652,7 +3653,7 @@ void LoadSave(short sSaveFileToLoad)
         LoadAndBlitPicToBuf2(0, eBottomFromScreen_Overlay, g_ptCvtString);
         CopyPictureWithTranspColor(eBottomFromScreen_Overlay, 0, 0);
     }
-    BitBlt(g_hCDCBuffer1, 0, 0, 640, 480, g_hCDCBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 0, 0, 640, 480, g_hDcBuffer2, 0, 0, SRCCOPY);
 
     if (g_sGameState.pcCharacter1Name[0] != ' '){
         g_sPicWidth = PERSONAGE_SIZE_X;
@@ -3724,13 +3725,13 @@ short ShowMenuAndWaitForSel(int iX, int iY, short sMenuItemsPerColumn)
     short   sSelectedMenuItem;
     RECT    sRect;
 
-    SetTextColor(g_hMainDC, g_crMenuFGColor);
-    SetTextColor(g_hCDCBuffer1, g_crMenuFGColor);
+    SetTextColor(g_hMainDc, g_crMenuFGColor);
+    SetTextColor(g_hDcBuffer1, g_crMenuFGColor);
 
     if (g_sMenuLength){ // Print menu strings
         for (sMenuIdx = 0; sMenuIdx < g_sMenuLength; sMenuIdx++){
             g_piMenuStringLengths[sMenuIdx] =
-                OutputString(g_hCDCBuffer1, g_hMainDC,
+                OutputString(g_hDcBuffer1, g_hMainDc,
                 iX + 220 * (sMenuIdx / sMenuItemsPerColumn),
                 iY + g_iMenuLineHeight * (sMenuIdx % sMenuItemsPerColumn),
                 50, g_pptMenuStrings[sMenuIdx], 0);
@@ -3741,7 +3742,7 @@ short ShowMenuAndWaitForSel(int iX, int iY, short sMenuItemsPerColumn)
     g_bScreenUpdatedOrMouseMoved = true;
     sMenuItemToSelect = 0;
     sSelectedMenuItem = -1;
-    SetTextColor(g_hMainDC, g_crMenuBGColor);
+    SetTextColor(g_hMainDc, g_crMenuBGColor);
 
     do{
         if (g_bResetMenuSelection){
@@ -3805,7 +3806,7 @@ short ShowMenuAndWaitForSel(int iX, int iY, short sMenuItemsPerColumn)
                 sRect.bottom = iY + g_iMenuLineHeight * (sSelectedMenuItem % sMenuItemsPerColumn);
                 sRect.top = g_iMenuLineHeight;  // Height
 
-                BitBlt(g_hMainDC, sRect.left, sRect.bottom, sRect.right, sRect.top, g_hCDCBuffer1, sRect.left, sRect.bottom, SRCCOPY);
+                BitBlt(g_hMainDc, sRect.left, sRect.bottom, sRect.right, sRect.top, g_hDcBuffer1, sRect.left, sRect.bottom, SRCCOPY);
             }
 
             sSelectedMenuItem = sMenuItemToSelect;
@@ -3816,8 +3817,8 @@ short ShowMenuAndWaitForSel(int iX, int iY, short sMenuItemsPerColumn)
             sRect.bottom = sRect.top + g_iMenuLineHeight;
 
             hWhiteBrush = (HBRUSH)GetStockObject(WHITE_BRUSH);
-            FillRect(g_hMainDC, &sRect, hWhiteBrush);
-            OutputString(g_hMainDC, g_hMainDC, sRect.left, sRect.top, 50, g_pptMenuStrings[sSelectedMenuItem], 0);
+            FillRect(g_hMainDc, &sRect, hWhiteBrush);
+            OutputString(g_hMainDc, g_hMainDc, sRect.left, sRect.top, 50, g_pptMenuStrings[sSelectedMenuItem], 0);
         }
         Sleep(10);
     } while (1);
@@ -3854,8 +3855,8 @@ short SelectItemInGraphicalMode()
                     sRect.top = g_sCGRects[sSelectedMenuItem].sTop;
                     sRect.bottom = g_sCGRects[sSelectedMenuItem].sBottom - g_sCGRects[sSelectedMenuItem].sTop + 1;  // Height
 
-                    BitBlt(g_hCDCBuffer1, sRect.left, sRect.top, sRect.right, sRect.bottom, g_hCDCBuffer2, sRect.left, sRect.top, SRCCOPY);
-                    BitBlt(g_hMainDC, sRect.left, sRect.top, sRect.right, sRect.bottom, g_hCDCBuffer2, sRect.left, sRect.top, SRCCOPY);
+                    BitBlt(g_hDcBuffer1, sRect.left, sRect.top, sRect.right, sRect.bottom, g_hDcBuffer2, sRect.left, sRect.top, SRCCOPY);
+                    BitBlt(g_hMainDc, sRect.left, sRect.top, sRect.right, sRect.bottom, g_hDcBuffer2, sRect.left, sRect.top, SRCCOPY);
                 }
                 Sleep(10);
                 break;
@@ -3930,8 +3931,8 @@ short SelectItemInGraphicalMode()
                 sRect.top = g_sCGRects[sSelectedMenuItem].sTop;
                 sRect.bottom = g_sCGRects[sSelectedMenuItem].sBottom - g_sCGRects[sSelectedMenuItem].sTop + 1;  // Height
 
-                BitBlt(g_hCDCBuffer1, sRect.left, sRect.top, sRect.right, sRect.bottom, g_hCDCBuffer2, sRect.left + g_psPicOriginPositions[eMainScreen].x, sRect.top + g_psPicOriginPositions[eMainScreen].y, SRCCOPY);
-                BitBlt(g_hMainDC, sRect.left, sRect.top, sRect.right, sRect.bottom, g_hCDCBuffer2, sRect.left + g_psPicOriginPositions[eMainScreen].x, sRect.top + g_psPicOriginPositions[eMainScreen].y, SRCCOPY);
+                BitBlt(g_hDcBuffer1, sRect.left, sRect.top, sRect.right, sRect.bottom, g_hDcBuffer2, sRect.left + g_psPicOriginPositions[eMainScreen].x, sRect.top + g_psPicOriginPositions[eMainScreen].y, SRCCOPY);
+                BitBlt(g_hMainDc, sRect.left, sRect.top, sRect.right, sRect.bottom, g_hDcBuffer2, sRect.left + g_psPicOriginPositions[eMainScreen].x, sRect.top + g_psPicOriginPositions[eMainScreen].y, SRCCOPY);
             }
 
             sSelectedMenuItem = sMenuItemToSelect;
@@ -3942,8 +3943,8 @@ short SelectItemInGraphicalMode()
                 sRect.top = g_sCGRects[sSelectedMenuItem].sTop;
                 sRect.bottom = g_sCGRects[sSelectedMenuItem].sBottom - g_sCGRects[sSelectedMenuItem].sTop + 1;  // Height
 
-                BitBlt(g_hCDCBuffer1, sRect.left, sRect.top, sRect.right, sRect.bottom, g_hCDCBuffer2, sRect.left + g_psPicOriginPositions[eRightFromScreen_TranspOverlay].x, sRect.top + g_psPicOriginPositions[eRightFromScreen_TranspOverlay].y, SRCCOPY);
-                BitBlt(g_hMainDC, sRect.left, sRect.top, sRect.right, sRect.bottom, g_hCDCBuffer2, sRect.left + g_psPicOriginPositions[eRightFromScreen_TranspOverlay].x, sRect.top + g_psPicOriginPositions[eRightFromScreen_TranspOverlay].y, SRCCOPY);
+                BitBlt(g_hDcBuffer1, sRect.left, sRect.top, sRect.right, sRect.bottom, g_hDcBuffer2, sRect.left + g_psPicOriginPositions[eRightFromScreen_TranspOverlay].x, sRect.top + g_psPicOriginPositions[eRightFromScreen_TranspOverlay].y, SRCCOPY);
+                BitBlt(g_hMainDc, sRect.left, sRect.top, sRect.right, sRect.bottom, g_hDcBuffer2, sRect.left + g_psPicOriginPositions[eRightFromScreen_TranspOverlay].x, sRect.top + g_psPicOriginPositions[eRightFromScreen_TranspOverlay].y, SRCCOPY);
             }
         }
         Sleep(10);
@@ -4103,7 +4104,7 @@ bool LoadAndBlitPicToBuf2(int a1, unsigned short iOriginPos, const TCHAR *cptFil
     g_sPicOffsetNum = FindPicOrigin((short)psBF->bmi.bmiHeader.biWidth, (short)psBF->bmi.bmiHeader.biHeight);
 
     StretchDIBits(
-        g_hCDCBuffer2,
+        g_hDcBuffer2,
         g_iOriginX + g_psPicOriginPositions[iOriginPos].x,
         g_iOriginY + g_psPicOriginPositions[iOriginPos].y,
         psBF->bmi.bmiHeader.biWidth,
@@ -4153,7 +4154,7 @@ bool OverlayPicWithTransparency(int iX, int iY)
 {
     HBITMAP     hTempBitmap;
     HBITMAP     hBitmap_Old;
-    HDC         hTempDC;
+    HDC         hTempDc;
     BYTE        *pbTempBitmapBuffer;
     void        *pvBuf;
     int         iYIdx;
@@ -4174,20 +4175,20 @@ bool OverlayPicWithTransparency(int iX, int iY)
     bmi.bmiHeader.biClrUsed = 0;
     bmi.bmiHeader.biClrImportant = 0;
 
-    hTempBitmap = CreateDIBSection(g_hCDCBuffer1, &bmi, DIB_RGB_COLORS, &pvBuf, NULL, 0);
+    hTempBitmap = CreateDIBSection(g_hDcBuffer1, &bmi, DIB_RGB_COLORS, &pvBuf, NULL, 0);
     if (hTempBitmap == NULL){
         return true;
     }
 
-    hTempDC = CreateCompatibleDC(g_hCDCBuffer1);
-    hBitmap_Old = (HBITMAP)SelectObject(hTempDC, hTempBitmap);
+    hTempDc = CreateCompatibleDC(g_hDcBuffer1);
+    hBitmap_Old = (HBITMAP)SelectObject(hTempDc, hTempBitmap);
 
     for (iYIdx = 0; iYIdx < (PERSONAGE_SIZE_Y / 2); iYIdx++)
     {   // 288 x 8
-        BitBlt(hTempDC, 0, 0, PERSONAGE_SIZE_X, 2, g_hCDCBuffer1, iX, iY + 2 * iYIdx, SRCCOPY); // Destination
-        BitBlt(hTempDC, 0, 2, PERSONAGE_SIZE_X, 2, g_hCDCBuffer2, g_psPicOriginPositions[eRightFromScreen_TranspOverlay].x, g_psPicOriginPositions[eRightFromScreen_TranspOverlay].y + 2 * iYIdx, SRCCOPY); // Source
-        BitBlt(hTempDC, 0, 4, PERSONAGE_SIZE_X, 2, g_hCDCBuffer2, g_psPicOriginPositions[eMainScreen].x, g_psPicOriginPositions[eMainScreen].y + 2 * iYIdx, SRCCOPY);               // Mask copy
-        BitBlt(hTempDC, 0, 6, PERSONAGE_SIZE_X, 2, g_hCDCBuffer2, g_psPicOriginPositions[eMainScreen].x, g_psPicOriginPositions[eMainScreen].y + 2 * iYIdx, NOTSRCCOPY);            // Mask inverted
+        BitBlt(hTempDc, 0, 0, PERSONAGE_SIZE_X, 2, g_hDcBuffer1, iX, iY + 2 * iYIdx, SRCCOPY); // Destination
+        BitBlt(hTempDc, 0, 2, PERSONAGE_SIZE_X, 2, g_hDcBuffer2, g_psPicOriginPositions[eRightFromScreen_TranspOverlay].x, g_psPicOriginPositions[eRightFromScreen_TranspOverlay].y + 2 * iYIdx, SRCCOPY); // Source
+        BitBlt(hTempDc, 0, 4, PERSONAGE_SIZE_X, 2, g_hDcBuffer2, g_psPicOriginPositions[eMainScreen].x, g_psPicOriginPositions[eMainScreen].y + 2 * iYIdx, SRCCOPY);               // Mask copy
+        BitBlt(hTempDc, 0, 6, PERSONAGE_SIZE_X, 2, g_hDcBuffer2, g_psPicOriginPositions[eMainScreen].x, g_psPicOriginPositions[eMainScreen].y + 2 * iYIdx, NOTSRCCOPY);            // Mask inverted
 
         pbTempBitmapBuffer = (BYTE *)pvBuf;
 
@@ -4204,12 +4205,12 @@ bool OverlayPicWithTransparency(int iX, int iY)
             pbTempBitmapBuffer++;
         }
 
-        BitBlt(g_hCDCBuffer1, iX, iY + 2 * iYIdx, PERSONAGE_SIZE_X, 2, hTempDC, 0, 0, SRCCOPY);
+        BitBlt(g_hDcBuffer1, iX, iY + 2 * iYIdx, PERSONAGE_SIZE_X, 2, hTempDc, 0, 0, SRCCOPY);
     }
-    DeleteObject(SelectObject(hTempDC, hBitmap_Old));
-    DeleteDC(hTempDC);
+    DeleteObject(SelectObject(hTempDc, hBitmap_Old));
+    DeleteDC(hTempDc);
     Sleep(10);
-    BitBlt(g_hCDCBuffer2, 0, 0, 640, 480, g_hCDCBuffer1, 0, 0, SRCCOPY);
+    BitBlt(g_hDcBuffer2, 0, 0, 640, 480, g_hDcBuffer1, 0, 0, SRCCOPY);
 
     return false;
 }
@@ -4221,21 +4222,21 @@ void CopyPictureWithTranspColor(unsigned short TransferSource, unsigned short xO
 
     switch (TransferSource){
     case eRightFromScreen_TranspOverlay:
-        crTranspColor = GetPixel(g_hCDCBuffer2, g_iOriginX + g_psPicOriginPositions[TransferSource].x, g_iOriginY + g_psPicOriginPositions[TransferSource].y);
+        crTranspColor = GetPixel(g_hDcBuffer2, g_iOriginX + g_psPicOriginPositions[TransferSource].x, g_iOriginY + g_psPicOriginPositions[TransferSource].y);
 
         BitBltWithTranspColor(
-            g_hCDCBuffer2,
+            g_hDcBuffer2,
             g_iOriginX + xOffs, g_iOriginY + yOffs, g_sPicWidth, g_sPicHeight,
-            g_hCDCBuffer2,
+            g_hDcBuffer2,
             g_iOriginX + g_psPicOriginPositions[TransferSource].x, g_iOriginY + g_psPicOriginPositions[TransferSource].y,
             crTranspColor);
         break;
 
     case eBottomFromScreen_Overlay:
     case eRightAndBottomFromScreen_BG:
-        BitBlt(g_hCDCBuffer2,
+        BitBlt(g_hDcBuffer2,
             g_iOriginX + xOffs, g_iOriginY + yOffs, g_sPicWidth, g_sPicHeight,
-            g_hCDCBuffer2,
+            g_hDcBuffer2,
             g_iOriginX + g_psPicOriginPositions[TransferSource].x, g_iOriginY + g_psPicOriginPositions[TransferSource].y,
             SRCCOPY);
         break;
@@ -4276,7 +4277,7 @@ void BlitPicWithEffects(short sEffect)
     if (g_bShowingFullScrMenu){
         g_bShowingFullScrMenu = false;
         SetMenu(g_hMainWindow, NULL);
-        SetupOrigin(g_hMainWindow, g_hMainDC);
+        SetupOrigin(g_hMainWindow, g_hMainDc);
     }
 
     g_bGraphicEffectsRunning = true;
@@ -4367,11 +4368,11 @@ void BlitPicWithEffects(short sEffect)
             for (iYIdx2 = 0; iYIdx2 < iStepCount; iYIdx2++){
                 iXpos = iYIdx1 + 8 * iYIdx2;
                 if (iXpos < g_sPicWidth){
-                    //BitBlt(g_hCDCBuffer1, g_iOriginX + iXpos, g_iOriginY, 1, g_sPicHeight, g_hCDCBuffer2, g_iOriginX + iXpos, g_iOriginY, SRCCOPY);
+                    //BitBlt(g_hDCBuffer1, g_iOriginX + iXpos, g_iOriginY, 1, g_sPicHeight, g_hDCBuffer2, g_iOriginX + iXpos, g_iOriginY, SRCCOPY);
                     BlitFromBuffersToScreen(iXpos, 0, 1, g_sPicHeight, iXpos, 0);
                 }
             }
-            //BitBlt(g_hMainDC, g_iOriginX, g_iOriginY, g_sPicWidth, g_sPicHeight, g_hCDCBuffer1, g_iOriginX, g_iOriginY, SRCCOPY);
+            //BitBlt(g_hMainDC, g_iOriginX, g_iOriginY, g_sPicWidth, g_sPicHeight, g_hDCBuffer1, g_iOriginX, g_iOriginY, SRCCOPY);
             BlitFromBuffersToScreen(0, 0, g_sPicWidth, g_sPicHeight, 0, 0);
             Sleep(EFFECTS_DELAY);
         }
@@ -4395,75 +4396,75 @@ BOOL BlitFromBuffersToScreen(int iDstX, int iDstY, int iCX, int iCY, int iSrcX, 
     else
         iRop = SRCCOPY;
 
-    BitBlt(g_hCDCBuffer1, g_iOriginX + iDstX, g_iOriginY + iDstY, iCX, iCY, g_hCDCBuffer2, g_iOriginX + iSrcX, g_iOriginY + iSrcY, iRop);
-    return BitBlt(g_hMainDC, g_iOriginX + iDstX, g_iOriginY + iDstY, iCX, iCY, g_hCDCBuffer1, g_iOriginX + iSrcX, g_iOriginY + iSrcY, iRop);
+    BitBlt(g_hDcBuffer1, g_iOriginX + iDstX, g_iOriginY + iDstY, iCX, iCY, g_hDcBuffer2, g_iOriginX + iSrcX, g_iOriginY + iSrcY, iRop);
+    return BitBlt(g_hMainDc, g_iOriginX + iDstX, g_iOriginY + iDstY, iCX, iCY, g_hDcBuffer1, g_iOriginX + iSrcX, g_iOriginY + iSrcY, iRop);
 }
 
 //----- (00407540) --------------------------------------------------------
 BOOL RestoreImage(int x, int y, int cx, int cy, int x1, int y1)
 {
-    BitBlt(g_hCDCBuffer1, x, y, cx, cy, g_hCDCBuffer2, x1, y1, SRCCOPY);
-    return BitBlt(g_hMainDC, x, y, cx, cy, g_hCDCBuffer1, x1, y1, SRCCOPY);
+    BitBlt(g_hDcBuffer1, x, y, cx, cy, g_hDcBuffer2, x1, y1, SRCCOPY);
+    return BitBlt(g_hMainDc, x, y, cx, cy, g_hDcBuffer1, x1, y1, SRCCOPY);
 }
 
 //----- (004075B0) --------------------------------------------------------
 int BitBltWithTranspColor(HDC hdcDst, unsigned short usDstX, unsigned short usDstY, unsigned short usCX, unsigned short usCY, HDC hdcSrc, unsigned short usSrcX, unsigned short usSrcY, COLORREF crTranspColor)
 {
-    HDC hdcSrcCDC_Mask;
+    HDC hDcSrc_Mask;
     HBITMAP hSrcMaskBitmap;
     HBITMAP hSrcMaskBitmap_Old;
-    HDC hdcDstCDC;
+    HDC hDcDst;
     HBITMAP hDstBitmap;
     HBITMAP hDstBitmap_Old;
-    HDC hdcSrcCDC;
+    HDC hDcSrc;
     HBITMAP hSrcBtimap;
     HBITMAP hSrcBtimap_Old;
     COLORREF crOldBackColor;
 
     if (crTranspColor)
     {
-        hdcSrcCDC_Mask = CreateCompatibleDC(hdcSrc);
+        hDcSrc_Mask = CreateCompatibleDC(hdcSrc);
         hSrcMaskBitmap = CreateBitmap(usCX, usCY, 1, 1, NULL);
-        hSrcMaskBitmap_Old = (HBITMAP)SelectObject(hdcSrcCDC_Mask, hSrcMaskBitmap);
-        hdcDstCDC = CreateCompatibleDC(hdcDst);
+        hSrcMaskBitmap_Old = (HBITMAP)SelectObject(hDcSrc_Mask, hSrcMaskBitmap);
+        hDcDst = CreateCompatibleDC(hdcDst);
         hDstBitmap = CreateCompatibleBitmap(hdcDst, usCX, usCY);
-        hDstBitmap_Old = (HBITMAP)SelectObject(hdcDstCDC, hDstBitmap);
-        hdcSrcCDC = CreateCompatibleDC(hdcSrc);
+        hDstBitmap_Old = (HBITMAP)SelectObject(hDcDst, hDstBitmap);
+        hDcSrc = CreateCompatibleDC(hdcSrc);
         hSrcBtimap = CreateCompatibleBitmap(hdcSrc, usCX, usCY);
-        hSrcBtimap_Old = (HBITMAP)SelectObject(hdcSrcCDC, hSrcBtimap);
-        BitBlt(hdcSrcCDC, 0, 0, usCX, usCY, hdcSrc, usSrcX, usSrcY, SRCCOPY);
-        crOldBackColor = SetBkColor(hdcSrcCDC, crTranspColor);
-        BitBlt(hdcSrcCDC_Mask, 0, 0, usCX, usCY, hdcSrcCDC, 0, 0, SRCCOPY);
-        BitBlt(hdcDstCDC, 0, 0, usCX, usCY, hdcSrcCDC_Mask, 0, 0, SRCCOPY);
-        BitBlt(hdcDst, usDstX, usDstY, usCX, usCY, hdcDstCDC, 0, 0, SRCAND);
-        PatBlt(hdcDstCDC, 0, 0, usCX, usCY, DSTINVERT);
-        BitBlt(hdcSrcCDC, 0, 0, usCX, usCY, hdcDstCDC, 0, 0, SRCAND);
-        BitBlt(hdcDst, usDstX, usDstY, usCX, usCY, hdcSrcCDC, 0, 0, SRCPAINT);
-        SetBkColor(hdcSrcCDC, crOldBackColor);
-        DeleteObject(SelectObject(hdcSrcCDC_Mask, hSrcMaskBitmap_Old));
-        DeleteObject(SelectObject(hdcDstCDC, hDstBitmap_Old));
-        DeleteObject(SelectObject(hdcSrcCDC, hSrcBtimap_Old));
-        DeleteDC(hdcSrcCDC_Mask);
-        DeleteDC(hdcDstCDC);
-        DeleteDC(hdcSrcCDC);
+        hSrcBtimap_Old = (HBITMAP)SelectObject(hDcSrc, hSrcBtimap);
+        BitBlt(hDcSrc, 0, 0, usCX, usCY, hdcSrc, usSrcX, usSrcY, SRCCOPY);
+        crOldBackColor = SetBkColor(hDcSrc, crTranspColor);
+        BitBlt(hDcSrc_Mask, 0, 0, usCX, usCY, hDcSrc, 0, 0, SRCCOPY);
+        BitBlt(hDcDst, 0, 0, usCX, usCY, hDcSrc_Mask, 0, 0, SRCCOPY);
+        BitBlt(hdcDst, usDstX, usDstY, usCX, usCY, hDcDst, 0, 0, SRCAND);
+        PatBlt(hDcDst, 0, 0, usCX, usCY, DSTINVERT);
+        BitBlt(hDcSrc, 0, 0, usCX, usCY, hDcDst, 0, 0, SRCAND);
+        BitBlt(hdcDst, usDstX, usDstY, usCX, usCY, hDcSrc, 0, 0, SRCPAINT);
+        SetBkColor(hDcSrc, crOldBackColor);
+        DeleteObject(SelectObject(hDcSrc_Mask, hSrcMaskBitmap_Old));
+        DeleteObject(SelectObject(hDcDst, hDstBitmap_Old));
+        DeleteObject(SelectObject(hDcSrc, hSrcBtimap_Old));
+        DeleteDC(hDcSrc_Mask);
+        DeleteDC(hDcDst);
+        DeleteDC(hDcSrc);
     }
     else
     {
-        hdcSrcCDC_Mask = CreateCompatibleDC(NULL);
+        hDcSrc_Mask = CreateCompatibleDC(NULL);
         hSrcMaskBitmap = CreateBitmap(usCX, usCY, 1, 1, NULL);
-        hSrcMaskBitmap_Old = (HBITMAP)SelectObject(hdcSrcCDC_Mask, hSrcMaskBitmap);
-        hdcDstCDC = CreateCompatibleDC(NULL);
+        hSrcMaskBitmap_Old = (HBITMAP)SelectObject(hDcSrc_Mask, hSrcMaskBitmap);
+        hDcDst = CreateCompatibleDC(NULL);
         hDstBitmap = CreateCompatibleBitmap(hdcDst, usCX, usCY);
-        hDstBitmap_Old = (HBITMAP)SelectObject(hdcDstCDC, hDstBitmap);
+        hDstBitmap_Old = (HBITMAP)SelectObject(hDcDst, hDstBitmap);
         crOldBackColor = SetBkColor(hdcSrc, RGB(0, 0, 0));
-        BitBlt(hdcSrcCDC_Mask, 0, 0, usCX, usCY, hdcSrc, usSrcX, usSrcY, SRCCOPY);
-        BitBlt(hdcDstCDC, 0, 0, usCX, usCY, hdcSrcCDC_Mask, 0, 0, SRCCOPY);
-        BitBlt(hdcDst, usDstX, usDstY, usCX, usCY, hdcDstCDC, 0, 0, SRCAND);
+        BitBlt(hDcSrc_Mask, 0, 0, usCX, usCY, hdcSrc, usSrcX, usSrcY, SRCCOPY);
+        BitBlt(hDcDst, 0, 0, usCX, usCY, hDcSrc_Mask, 0, 0, SRCCOPY);
+        BitBlt(hdcDst, usDstX, usDstY, usCX, usCY, hDcDst, 0, 0, SRCAND);
         BitBlt(hdcDst, usDstX, usDstY, usCX, usCY, hdcSrc, usSrcX, usSrcY, SRCPAINT);
-        DeleteObject(SelectObject(hdcSrcCDC_Mask, hSrcMaskBitmap_Old));
-        DeleteObject(SelectObject(hdcDstCDC, hDstBitmap_Old));
-        DeleteDC(hdcSrcCDC_Mask);
-        DeleteDC(hdcDstCDC);
+        DeleteObject(SelectObject(hDcSrc_Mask, hSrcMaskBitmap_Old));
+        DeleteObject(SelectObject(hDcDst, hDstBitmap_Old));
+        DeleteDC(hDcSrc_Mask);
+        DeleteDC(hDcDst);
         SetBkColor(hdcSrc, crOldBackColor);
     }
     return 0;
@@ -4488,24 +4489,24 @@ short ProcessInGameMenu()
     else{
         iXOffset = 128;
     }
-    BitBlt(g_hCDCBuffer1, 16, 400, 64, 64, g_hCDC_MenuGfx, iXOffset, 80, SRCCOPY);
-    BitBlt(g_hMainDC, 16, 400, 64, 64, g_hCDC_MenuGfx, iXOffset, 80, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 16, 400, 64, 64, g_hDcMenuGfx, iXOffset, 80, SRCCOPY);
+    BitBlt(g_hMainDc, 16, 400, 64, 64, g_hDcMenuGfx, iXOffset, 80, SRCCOPY);
 
     while (1)
     {
-        BitBltWithTranspColor(g_hCDCBuffer1, 48, 16, 240, 36, g_hCDC_MenuGfx, 0, 0, RGB(0, 255, 0));
+        BitBltWithTranspColor(g_hDcBuffer1, 48, 16, 240, 36, g_hDcMenuGfx, 0, 0, RGB(0, 255, 0));
         for (iYIdx = 0; iYIdx < 5; iYIdx++){
-            BitBltWithTranspColor(g_hCDCBuffer1, 48, 23 * iYIdx + 52, 240, 23, g_hCDC_MenuGfx, 0, 36, RGB(0, 255, 0));
+            BitBltWithTranspColor(g_hDcBuffer1, 48, 23 * iYIdx + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0, 255, 0));
         };
-        BitBltWithTranspColor(g_hCDCBuffer1, 48, 23 * iYIdx + 52, 240, 20, g_hCDC_MenuGfx, 0, 60, RGB(0, 255, 0));
-        BitBlt(g_hMainDC, 48, 16, 240, 171, g_hCDCBuffer1, 48, 16, SRCCOPY);
+        BitBltWithTranspColor(g_hDcBuffer1, 48, 23 * iYIdx + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0, 255, 0));
+        BitBlt(g_hMainDc, 48, 16, 240, 171, g_hDcBuffer1, 48, 16, SRCCOPY);
 
         g_sPoint.x = 52;
         g_sPoint.y = 58;
         ClientToScreen(g_hMainWindow, &g_sPoint);
         SetCursorPos(g_sPoint.x, g_sPoint.y);
         g_sIntermediateResult = ProcessMenu(60, 54, 5, (const TCHAR *)g_pptIngameMenuStrs);
-        BitBlt(g_hCDCBuffer1, 48, 16, 240, 171, g_hMainDC, 48, 16, SRCCOPY);
+        BitBlt(g_hDcBuffer1, 48, 16, 240, 171, g_hMainDc, 48, 16, SRCCOPY);
 
         if (g_sIntermediateResult == -1){
             RestoreImage(48, 16, 240, 171, 48, 16);
@@ -4542,12 +4543,12 @@ short ProcessInGameMenu()
             return result;
         }
         if (g_sIntermediateResult == 1){
-            BitBltWithTranspColor(g_hCDCBuffer1, 150, 16, 240, 36, g_hCDC_MenuGfx, 0, 0, RGB(0, 255, 0));
+            BitBltWithTranspColor(g_hDcBuffer1, 150, 16, 240, 36, g_hDcMenuGfx, 0, 0, RGB(0, 255, 0));
             for (g_iX = 0; g_iX < 10; g_iX++){
-                BitBltWithTranspColor(g_hCDCBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hCDC_MenuGfx, 0, 36, RGB(0, 255, 0));
+                BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0, 255, 0));
             }
-            BitBltWithTranspColor(g_hCDCBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hCDC_MenuGfx, 0, 60, RGB(0, 255, 0));
-            BitBlt(g_hMainDC, 150, 16, 240, 286, g_hCDCBuffer1, 150, 16, SRCCOPY);
+            BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0, 255, 0));
+            BitBlt(g_hMainDc, 150, 16, 240, 286, g_hDcBuffer1, 150, 16, SRCCOPY);
 
             g_sPoint.x = 154;
             g_sPoint.y = 58;
@@ -4581,12 +4582,12 @@ short ProcessInGameMenu()
             continue;
         }
         if (g_sIntermediateResult == 2){
-            BitBltWithTranspColor(g_hCDCBuffer1, 150, 16, 240, 36, g_hCDC_MenuGfx, 0, 0, RGB(0, 255, 0));
+            BitBltWithTranspColor(g_hDcBuffer1, 150, 16, 240, 36, g_hDcMenuGfx, 0, 0, RGB(0, 255, 0));
             for (g_iX = 0; g_iX < 10; g_iX++){
-                BitBltWithTranspColor(g_hCDCBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hCDC_MenuGfx, 0, 36, RGB(0, 255, 0));
+                BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0, 255, 0));
             }
-            BitBltWithTranspColor(g_hCDCBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hCDC_MenuGfx, 0, 60, RGB(0, 255, 0));
-            BitBlt(g_hMainDC, 150, 16, 240, 286, g_hCDCBuffer1, 150, 16, SRCCOPY);
+            BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0, 255, 0));
+            BitBlt(g_hMainDc, 150, 16, 240, 286, g_hDcBuffer1, 150, 16, SRCCOPY);
 
             g_sPoint.x = 154;
             g_sPoint.y = 58;
@@ -4616,12 +4617,12 @@ short ProcessInGameMenu()
             continue;
         }
         if (g_sIntermediateResult == 3){
-            BitBltWithTranspColor(g_hCDCBuffer1, 150, 16, 240, 36, g_hCDC_MenuGfx, 0, 0, RGB(0, 255, 0));
+            BitBltWithTranspColor(g_hDcBuffer1, 150, 16, 240, 36, g_hDcMenuGfx, 0, 0, RGB(0, 255, 0));
             for (g_iX = 0; g_iX < 4; g_iX++){
-                BitBltWithTranspColor(g_hCDCBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hCDC_MenuGfx, 0, 36, RGB(0, 255, 0));
+                BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0, 255, 0));
             }
-            BitBltWithTranspColor(g_hCDCBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hCDC_MenuGfx, 0, 60, RGB(0, 255, 0));
-            BitBlt(g_hMainDC, 150, 16, 240, 286, g_hCDCBuffer1, 150, 16, SRCCOPY);
+            BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0, 255, 0));
+            BitBlt(g_hMainDc, 150, 16, 240, 286, g_hDcBuffer1, 150, 16, SRCCOPY);
 
             g_sPoint.x = 154;
             g_sPoint.y = 58;
@@ -4670,12 +4671,12 @@ short ProcessInGameMenu()
             return 0;
         }
 
-        BitBltWithTranspColor(g_hCDCBuffer1, 150, 16, 240, 36, g_hCDC_MenuGfx, 0, 0, RGB(0, 255, 0));
+        BitBltWithTranspColor(g_hDcBuffer1, 150, 16, 240, 36, g_hDcMenuGfx, 0, 0, RGB(0, 255, 0));
         for (g_iX = 0; g_iX < 2; g_iX++){
-            BitBltWithTranspColor(g_hCDCBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hCDC_MenuGfx, 0, 36, RGB(0, 255, 0));
+            BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0, 255, 0));
         }
-        BitBltWithTranspColor(g_hCDCBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hCDC_MenuGfx, 0, 60, RGB(0, 255, 0));
-        BitBlt(g_hMainDC, 150, 16, 240, 102, g_hCDCBuffer1, 150, 16, SRCCOPY);
+        BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0, 255, 0));
+        BitBlt(g_hMainDc, 150, 16, 240, 102, g_hDcBuffer1, 150, 16, SRCCOPY);
 
         g_sPoint.x = 154;
         g_sPoint.y = 58;
@@ -4714,27 +4715,27 @@ short ProcessRightMenu()
     {
         iXOffset = 192;
     }
-    BitBlt(g_hCDCBuffer1, 560, 400, 64, 64, g_hCDC_MenuGfx, iXOffset, 80, SRCCOPY);
-    BitBlt(g_hMainDC, 560, 400, 64, 64, g_hCDC_MenuGfx, iXOffset, 80, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 560, 400, 64, 64, g_hDcMenuGfx, iXOffset, 80, SRCCOPY);
+    BitBlt(g_hMainDc, 560, 400, 64, 64, g_hDcMenuGfx, iXOffset, 80, SRCCOPY);
 
     while (1)
     {
         while (1)
         {
-            BitBltWithTranspColor(g_hCDCBuffer1, 48, 16, 240, 36, g_hCDC_MenuGfx, 0, 0, RGB(0x00, 0xFF, 0x00));// Draw top of the menu
+            BitBltWithTranspColor(g_hDcBuffer1, 48, 16, 240, 36, g_hDcMenuGfx, 0, 0, RGB(0x00, 0xFF, 0x00));// Draw top of the menu
 
             for (iIdx = 0; iIdx < 3; iIdx++)
-                BitBltWithTranspColor(g_hCDCBuffer1, 48, 23 * iIdx + 52, 240, 23, g_hCDC_MenuGfx, 0, 36, RGB(0x00, 0xFF, 0x00));// Draw middle of the menu
+                BitBltWithTranspColor(g_hDcBuffer1, 48, 23 * iIdx + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0x00, 0xFF, 0x00));// Draw middle of the menu
 
-            BitBltWithTranspColor(g_hCDCBuffer1, 48, 23 * iIdx + 52, 240, 20, g_hCDC_MenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));// Draw bottom of the menu
+            BitBltWithTranspColor(g_hDcBuffer1, 48, 23 * iIdx + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));// Draw bottom of the menu
 
-            BitBlt(g_hMainDC, 48, 16, 240, 125, g_hCDCBuffer1, 48, 16, SRCCOPY);// Blit to main display
+            BitBlt(g_hMainDc, 48, 16, 240, 125, g_hDcBuffer1, 48, 16, SRCCOPY);// Blit to main display
             g_sPoint.x = 52;                           // Move mouse cursor to the menu top
             g_sPoint.y = 58;
             ClientToScreen(g_hMainWindow, &g_sPoint);
             SetCursorPos(g_sPoint.x, g_sPoint.y);
             g_sIntermediateResult = ProcessMenu(60, 54, 5, (const TCHAR *)g_pptExtrasMenuStrs);// Show right menu
-            BitBlt(g_hCDCBuffer1, 48, 16, 240, 125, g_hMainDC, 48, 16, SRCCOPY);
+            BitBlt(g_hDcBuffer1, 48, 16, 240, 125, g_hMainDc, 48, 16, SRCCOPY);
             if (g_sIntermediateResult == -1) // Escape selected
             {
                 RestoreImage(48, 16, 240, 125, 48, 16);
@@ -4752,12 +4753,12 @@ short ProcessRightMenu()
             break;
         RestoreImage(48, 16, 390, 286, 48, 16);     // Item number 1 selected - "Extras"
         RestoreImage(560, 400, 64, 64, 560, 400);
-        BitBlt(g_hCDCBuffer2, 640, 480, 640, 480, g_hCDCBuffer1, 0, 0, SRCCOPY);
+        BitBlt(g_hDcBuffer2, 640, 480, 640, 480, g_hDcBuffer1, 0, 0, SRCCOPY);
         ExtraModeMenu();
         ProcessBGMInExtraMode(eShutdown);
-        BitBlt(g_hCDCBuffer2, 0, 0, 640, 480, g_hCDCBuffer2, 640, 480, SRCCOPY);
-        BitBlt(g_hCDCBuffer1, 0, 0, 640, 480, g_hCDCBuffer2, 640, 480, SRCCOPY);
-        BitBlt(g_hMainDC, 0, 0, 640, 480, g_hCDCBuffer2, 640, 480, SRCCOPY);
+        BitBlt(g_hDcBuffer2, 0, 0, 640, 480, g_hDcBuffer2, 640, 480, SRCCOPY);
+        BitBlt(g_hDcBuffer1, 0, 0, 640, 480, g_hDcBuffer2, 640, 480, SRCCOPY);
+        BitBlt(g_hMainDc, 0, 0, 640, 480, g_hDcBuffer2, 640, 480, SRCCOPY);
         if (g_sGameState.pcBgMusicName[0] != ' '){
             ConvertMBCSToUni(g_sGameState.pcBgMusicName, g_ptCvtString, CVT_BUF_SIZE);
             PlayMidiFile(g_ptCvtString, true);
@@ -4767,7 +4768,7 @@ short ProcessRightMenu()
     {
         RestoreImage(48, 16, 240, 125, 48, 16);
         RestoreImage(560, 400, 64, 64, 560, 400);
-        SaveScreenshot(g_hMainDC, (BITMAP_FILE *)g_pvDataBuffer);
+        SaveScreenshot(g_hMainDc, (BITMAP_FILE *)g_pvDataBuffer);
         g_wKeyCommand = EMPTY_MASK;
         g_sPrevKeyCommand = EMPTY_MASK;
     }
@@ -4782,32 +4783,32 @@ short PrepareExtraModeMenu(short sCGPage)
     switch (sCGPage){
     case 0:
         LoadAndBlitPicToBuf2(0, eMainScreen, _T("CGMODE_1"));                       // Load bg page
-        BitBlt(g_hCDCBuffer1, 0, 0, 640, 480, g_hCDCBuffer2, 0, 0, SRCCOPY);
+        BitBlt(g_hDcBuffer1, 0, 0, 640, 480, g_hDcBuffer2, 0, 0, SRCCOPY);
         LoadAndBlitPicToBuf2(0, eMainScreen, _T("CGMODE_A"));                       // Load bg page with images
         break;
     case 1:
         LoadAndBlitPicToBuf2(0, eMainScreen, _T("CGMODE_2"));
-        BitBlt(g_hCDCBuffer1, 0, 0, 640, 480, g_hCDCBuffer2, 0, 0, SRCCOPY);
+        BitBlt(g_hDcBuffer1, 0, 0, 640, 480, g_hDcBuffer2, 0, 0, SRCCOPY);
         LoadAndBlitPicToBuf2(0, eMainScreen, _T("CGMODE_B"));
         break;
     case 2:
         LoadAndBlitPicToBuf2(0, eMainScreen, _T("CGMODE_2"));
-        BitBlt(g_hCDCBuffer1, 0, 0, 640, 480, g_hCDCBuffer2, 0, 0, SRCCOPY);
+        BitBlt(g_hDcBuffer1, 0, 0, 640, 480, g_hDcBuffer2, 0, 0, SRCCOPY);
         LoadAndBlitPicToBuf2(0, eMainScreen, _T("CGMODE_C"));
         break;
     case 3:
         LoadAndBlitPicToBuf2(0, eMainScreen, _T("CGMODE_2"));
-        BitBlt(g_hCDCBuffer1, 0, 0, 640, 480, g_hCDCBuffer2, 0, 0, SRCCOPY);
+        BitBlt(g_hDcBuffer1, 0, 0, 640, 480, g_hDcBuffer2, 0, 0, SRCCOPY);
         LoadAndBlitPicToBuf2(0, eMainScreen, _T("CGMODE_D"));
         break;
     case 4:
         LoadAndBlitPicToBuf2(0, eMainScreen, _T("CGMODE_2"));
-        BitBlt(g_hCDCBuffer1, 0, 0, 640, 480, g_hCDCBuffer2, 0, 0, SRCCOPY);
+        BitBlt(g_hDcBuffer1, 0, 0, 640, 480, g_hDcBuffer2, 0, 0, SRCCOPY);
         LoadAndBlitPicToBuf2(0, eMainScreen, _T("CGMODE_E"));
         break;
     case 5:
         LoadAndBlitPicToBuf2(0, eMainScreen, _T("CGMODE_3"));
-        BitBlt(g_hCDCBuffer1, 0, 0, 640, 480, g_hCDCBuffer2, 0, 0, SRCCOPY);
+        BitBlt(g_hDcBuffer1, 0, 0, 640, 480, g_hDcBuffer2, 0, 0, SRCCOPY);
         LoadAndBlitPicToBuf2(0, eMainScreen, _T("CGMODE_F"));
         break;
     default:
@@ -4819,7 +4820,7 @@ short PrepareExtraModeMenu(short sCGPage)
         iPG0_Y = 74 * (g_sMenuLength / 5);
 
         if (g_sSysFile.bCgAvailable[25 * sCGPage + g_sMenuLength])  // Blit image if available
-            BitBlt(g_hCDCBuffer1, iPG0_X + 42, iPG0_Y + 13, 107, 70, g_hCDCBuffer2, iPG0_X + 42, iPG0_Y + 13, SRCCOPY);
+            BitBlt(g_hDcBuffer1, iPG0_X + 42, iPG0_Y + 13, 107, 70, g_hDcBuffer2, iPG0_X + 42, iPG0_Y + 13, SRCCOPY);
 
         g_sCGRects[g_sMenuLength].sLeft = iPG0_X + 42;
         g_sCGRects[g_sMenuLength].sTop = iPG0_Y + 13;
@@ -4848,9 +4849,9 @@ short PrepareExtraModeMenu(short sCGPage)
     g_sMenuLength++;
 
     // Update display
-    BitBlt(g_hMainDC, 0, 0, 640, 480, g_hCDCBuffer1, 0, 0, SRCCOPY);
-    BitBlt(g_hCDCBuffer2, 0, 0, 640, 480, g_hCDCBuffer1, 0, 0, SRCCOPY);
-    BitBlt(g_hCDCBuffer2, 640, 0, 640, 480, g_hCDCBuffer1, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 0, 0, 640, 480, g_hDcBuffer1, 0, 0, SRCCOPY);
+    BitBlt(g_hDcBuffer2, 0, 0, 640, 480, g_hDcBuffer1, 0, 0, SRCCOPY);
+    BitBlt(g_hDcBuffer2, 640, 0, 640, 480, g_hDcBuffer1, 0, 0, SRCCOPY);
 
     ProcessBGMInExtraMode(eUpdateBGMName);               // Update BGM text
     return 0;
@@ -4879,7 +4880,7 @@ short ExtraModeMenu()
         g_sSysFile.bCgAvailable[149] = 1;
     }
 
-    BitBlt(g_hCDCBuffer2, 391, 392, 152, 80, g_hCDC_MenuGfx, 0, 162, SRCCOPY);// Copy play/Pause buttons
+    BitBlt(g_hDcBuffer2, 391, 392, 152, 80, g_hDcMenuGfx, 0, 162, SRCCOPY);// Copy play/Pause buttons
 
     while (1){
         PrepareExtraModeMenu(iCurrPage);
@@ -4994,28 +4995,28 @@ void ProcessBGMInExtraMode(short sCmd)
     switch (sCmd)
     {
     case ePlayButton:                                     // Play Button pushed
-        BitBlt(g_hMainDC, 406, 404, 61, 33, g_hCDC_MenuGfx, 15, 254, SRCCOPY);// Play button pushed
-        BitBlt(g_hCDCBuffer1, 406, 404, 61, 33, g_hCDC_MenuGfx, 15, 254, SRCCOPY);
-        BitBlt(g_hCDCBuffer2, 406, 404, 61, 33, g_hCDC_MenuGfx, 15, 254, SRCCOPY);
+        BitBlt(g_hMainDc, 406, 404, 61, 33, g_hDcMenuGfx, 15, 254, SRCCOPY);// Play button pushed
+        BitBlt(g_hDcBuffer1, 406, 404, 61, 33, g_hDcMenuGfx, 15, 254, SRCCOPY);
+        BitBlt(g_hDcBuffer2, 406, 404, 61, 33, g_hDcMenuGfx, 15, 254, SRCCOPY);
         PlayMidiFile(pptBgmFileNames[g_iCurrentMidiFile], true);
-        BitBlt(g_hMainDC, 406, 404, 61, 33, g_hCDC_MenuGfx, 15, 334, SRCCOPY);// Play button active
-        BitBlt(g_hCDCBuffer1, 406, 404, 61, 33, g_hCDC_MenuGfx, 15, 334, SRCCOPY);
-        BitBlt(g_hCDCBuffer2, 406, 404, 61, 33, g_hCDC_MenuGfx, 15, 334, SRCCOPY);
-        BitBlt(g_hCDCBuffer2, 406 + 640, 404, 61, 33, g_hCDC_MenuGfx, 15, 334, SRCCOPY);
+        BitBlt(g_hMainDc, 406, 404, 61, 33, g_hDcMenuGfx, 15, 334, SRCCOPY);// Play button active
+        BitBlt(g_hDcBuffer1, 406, 404, 61, 33, g_hDcMenuGfx, 15, 334, SRCCOPY);
+        BitBlt(g_hDcBuffer2, 406, 404, 61, 33, g_hDcMenuGfx, 15, 334, SRCCOPY);
+        BitBlt(g_hDcBuffer2, 406 + 640, 404, 61, 33, g_hDcMenuGfx, 15, 334, SRCCOPY);
         g_bMidiPlaying = true;
         break;
     case eStopButton:                                     // Stop button pushed
         if (g_bMidiPlaying)
         {
-            BitBlt(g_hMainDC, 471, 404, 61, 33, g_hCDC_MenuGfx, 80, 254, SRCCOPY);// Stop button pushed
-            BitBlt(g_hCDCBuffer1, 471, 404, 61, 33, g_hCDC_MenuGfx, 80, 254, SRCCOPY);
-            BitBlt(g_hCDCBuffer2, 471, 404, 61, 33, g_hCDC_MenuGfx, 80, 254, SRCCOPY);
+            BitBlt(g_hMainDc, 471, 404, 61, 33, g_hDcMenuGfx, 80, 254, SRCCOPY);// Stop button pushed
+            BitBlt(g_hDcBuffer1, 471, 404, 61, 33, g_hDcMenuGfx, 80, 254, SRCCOPY);
+            BitBlt(g_hDcBuffer2, 471, 404, 61, 33, g_hDcMenuGfx, 80, 254, SRCCOPY);
             StopMidiPlayback();
             Sleep(100);
-            BitBlt(g_hMainDC, 391, 392, 152, 80, g_hCDC_MenuGfx, 0, 162, SRCCOPY);// Whole buttons block
-            BitBlt(g_hCDCBuffer1, 391, 392, 152, 80, g_hCDC_MenuGfx, 0, 162, SRCCOPY);
-            BitBlt(g_hCDCBuffer2, 391, 392, 152, 80, g_hCDC_MenuGfx, 0, 162, SRCCOPY);
-            BitBlt(g_hCDCBuffer2, 391 + 640, 392, 152, 80, g_hCDC_MenuGfx, 0, 162, SRCCOPY);
+            BitBlt(g_hMainDc, 391, 392, 152, 80, g_hDcMenuGfx, 0, 162, SRCCOPY);// Whole buttons block
+            BitBlt(g_hDcBuffer1, 391, 392, 152, 80, g_hDcMenuGfx, 0, 162, SRCCOPY);
+            BitBlt(g_hDcBuffer2, 391, 392, 152, 80, g_hDcMenuGfx, 0, 162, SRCCOPY);
+            BitBlt(g_hDcBuffer2, 391 + 640, 392, 152, 80, g_hDcMenuGfx, 0, 162, SRCCOPY);
             g_bMidiPlaying = false;
         }
         break;
@@ -5023,43 +5024,43 @@ void ProcessBGMInExtraMode(short sCmd)
         if (g_iCurrentMidiFile)
         {
             g_iCurrentMidiFile--;
-            BitBlt(g_hMainDC, 406, 442, 61, 19, g_hCDC_MenuGfx, 15, 292, SRCCOPY);// FB Button pushed
-            BitBlt(g_hCDCBuffer1, 406, 442, 61, 19, g_hCDC_MenuGfx, 15, 292, SRCCOPY);
-            BitBlt(g_hCDCBuffer2, 406, 442, 61, 19, g_hCDC_MenuGfx, 15, 292, SRCCOPY);
+            BitBlt(g_hMainDc, 406, 442, 61, 19, g_hDcMenuGfx, 15, 292, SRCCOPY);// FB Button pushed
+            BitBlt(g_hDcBuffer1, 406, 442, 61, 19, g_hDcMenuGfx, 15, 292, SRCCOPY);
+            BitBlt(g_hDcBuffer2, 406, 442, 61, 19, g_hDcMenuGfx, 15, 292, SRCCOPY);
             if (g_bMidiPlaying)
                 PlayMidiFile(pptBgmFileNames[g_iCurrentMidiFile], true);
             else
                 Sleep(100);
-            BitBlt(g_hMainDC, 406, 442, 61, 19, g_hCDC_MenuGfx, 15, 372, SRCCOPY);// FB Button active
-            BitBlt(g_hCDCBuffer1, 406, 442, 61, 19, g_hCDC_MenuGfx, 15, 372, SRCCOPY);
-            BitBlt(g_hCDCBuffer2, 406, 442, 61, 19, g_hCDC_MenuGfx, 15, 372, SRCCOPY);
-            BitBlt(g_hCDCBuffer2, 406 + 640, 442, 61, 19, g_hCDC_MenuGfx, 15, 372, SRCCOPY);
+            BitBlt(g_hMainDc, 406, 442, 61, 19, g_hDcMenuGfx, 15, 372, SRCCOPY);// FB Button active
+            BitBlt(g_hDcBuffer1, 406, 442, 61, 19, g_hDcMenuGfx, 15, 372, SRCCOPY);
+            BitBlt(g_hDcBuffer2, 406, 442, 61, 19, g_hDcMenuGfx, 15, 372, SRCCOPY);
+            BitBlt(g_hDcBuffer2, 406 + 640, 442, 61, 19, g_hDcMenuGfx, 15, 372, SRCCOPY);
         }
         break;
     case eFFButton:                                     // FF Button pushed
         if (g_iCurrentMidiFile != 9)
         {
             g_iCurrentMidiFile++;
-            BitBlt(g_hMainDC, 471, 442, 61, 19, g_hCDC_MenuGfx, 80, 292, SRCCOPY);// FF Button pushed
-            BitBlt(g_hCDCBuffer1, 471, 442, 61, 19, g_hCDC_MenuGfx, 80, 292, SRCCOPY);
-            BitBlt(g_hCDCBuffer2, 471, 442, 61, 19, g_hCDC_MenuGfx, 80, 292, SRCCOPY);
+            BitBlt(g_hMainDc, 471, 442, 61, 19, g_hDcMenuGfx, 80, 292, SRCCOPY);// FF Button pushed
+            BitBlt(g_hDcBuffer1, 471, 442, 61, 19, g_hDcMenuGfx, 80, 292, SRCCOPY);
+            BitBlt(g_hDcBuffer2, 471, 442, 61, 19, g_hDcMenuGfx, 80, 292, SRCCOPY);
             if (g_bMidiPlaying)
                 PlayMidiFile(pptBgmFileNames[g_iCurrentMidiFile], true);
             else
                 Sleep(100);
-            BitBlt(g_hMainDC, 471, 442, 61, 19, g_hCDC_MenuGfx, 80, 372, SRCCOPY);// FF Button active
-            BitBlt(g_hCDCBuffer1, 471, 442, 61, 19, g_hCDC_MenuGfx, 80, 372, SRCCOPY);
-            BitBlt(g_hCDCBuffer2, 471, 442, 61, 19, g_hCDC_MenuGfx, 80, 372, SRCCOPY);
-            BitBlt(g_hCDCBuffer2, 471 + 640, 442, 61, 19, g_hCDC_MenuGfx, 80, 372, SRCCOPY);
+            BitBlt(g_hMainDc, 471, 442, 61, 19, g_hDcMenuGfx, 80, 372, SRCCOPY);// FF Button active
+            BitBlt(g_hDcBuffer1, 471, 442, 61, 19, g_hDcMenuGfx, 80, 372, SRCCOPY);
+            BitBlt(g_hDcBuffer2, 471, 442, 61, 19, g_hDcMenuGfx, 80, 372, SRCCOPY);
+            BitBlt(g_hDcBuffer2, 471 + 640, 442, 61, 19, g_hDcMenuGfx, 80, 372, SRCCOPY);
         }
         break;
     case eUpdateBGMName:                                     // Update BGM name
         RestoreImage(g_sTextWindowPos.x, g_sTextWindowPos.y, 180, 2 * g_iStringHeight, g_sTextWindowPos.x, g_sTextWindowPos.y);
         g_crColor = RGB(255, 255, 255);
-        SetTextColor(g_hMainDC, g_crColor);
-        SetTextColor(g_hCDCBuffer1, g_crColor);
+        SetTextColor(g_hMainDc, g_crColor);
+        SetTextColor(g_hDcBuffer1, g_crColor);
         g_iTextLineHeight = 16;
-        OutputString(g_hCDCBuffer1, g_hMainDC, g_sTextWindowPos.x, g_sTextWindowPos.y, 20, pptBgmNames[g_iCurrentMidiFile], 0);
+        OutputString(g_hDcBuffer1, g_hMainDc, g_sTextWindowPos.x, g_sTextWindowPos.y, 20, pptBgmNames[g_iCurrentMidiFile], 0);
         break;
     case eShutdown:                                     // Stop everything
         g_bMidiPlaying = 0;
@@ -5140,9 +5141,9 @@ int ShowCG(const TCHAR *cptCGName)
             {
                 iOffsetX = 192;
             }
-            BitBlt(g_hCDCBuffer1, 560, 400, 64, 64, g_hCDC_MenuGfx, iOffsetX, 80, SRCCOPY);
-            BitBlt(g_hMainDC, 560, 400, 64, 64, g_hCDC_MenuGfx, iOffsetX, 80, SRCCOPY);
-            SaveScreenshot(g_hMainDC, (BITMAP_FILE *)g_pvDataBuffer);
+            BitBlt(g_hDcBuffer1, 560, 400, 64, 64, g_hDcMenuGfx, iOffsetX, 80, SRCCOPY);
+            BitBlt(g_hMainDc, 560, 400, 64, 64, g_hDcMenuGfx, iOffsetX, 80, SRCCOPY);
+            SaveScreenshot(g_hMainDc, (BITMAP_FILE *)g_pvDataBuffer);
             RestoreImage(560, 400, 64, 64, 560, 400);
             g_wKeyCommand = EMPTY_MASK;
             g_sPrevKeyCommand = EMPTY_MASK;
@@ -5220,9 +5221,9 @@ int ShowCG2(const TCHAR *cptCGName)
             {
                 iOffsetX = 192;
             }
-            BitBlt(g_hCDCBuffer1, 560, 400, 64, 64, g_hCDC_MenuGfx, iOffsetX, 80, SRCCOPY);
-            BitBlt(g_hMainDC, 560, 400, 64, 64, g_hCDC_MenuGfx, iOffsetX, 80, SRCCOPY);
-            SaveScreenshot(g_hMainDC, (BITMAP_FILE *)g_pvDataBuffer);
+            BitBlt(g_hDcBuffer1, 560, 400, 64, 64, g_hDcMenuGfx, iOffsetX, 80, SRCCOPY);
+            BitBlt(g_hMainDc, 560, 400, 64, 64, g_hDcMenuGfx, iOffsetX, 80, SRCCOPY);
+            SaveScreenshot(g_hMainDc, (BITMAP_FILE *)g_pvDataBuffer);
             RestoreImage(560, 400, 64, 64, 560, 400);
             g_wKeyCommand = EMPTY_MASK;
             g_sPrevKeyCommand = EMPTY_MASK;
@@ -5609,30 +5610,30 @@ short ProcessMainStartMenu()
             iPicPosX = 0;
         else                                                                    // Night mode
             iPicPosX = 128;
-        BitBlt(g_hCDCBuffer1, 16, 400, 64, 64, g_hCDC_MenuGfx, iPicPosX, 80, SRCCOPY);
-        BitBlt(g_hMainDC, 16, 400, 64, 64, g_hCDC_MenuGfx, iPicPosX, 80, SRCCOPY);
+        BitBlt(g_hDcBuffer1, 16, 400, 64, 64, g_hDcMenuGfx, iPicPosX, 80, SRCCOPY);
+        BitBlt(g_hMainDc, 16, 400, 64, 64, g_hDcMenuGfx, iPicPosX, 80, SRCCOPY);
 
         while (1)                                   // Main menu loop
         {
             // Blit top menu part
-            BitBltWithTranspColor(g_hCDCBuffer1, 48, 16, 240, 36, g_hCDC_MenuGfx, 0, 0, RGB(0x00, 0xFF, 0x00));
+            BitBltWithTranspColor(g_hDcBuffer1, 48, 16, 240, 36, g_hDcMenuGfx, 0, 0, RGB(0x00, 0xFF, 0x00));
 
             // Blit 4 middle menu parts
             for (iIdx = 0; iIdx < 4; iIdx++){
-                BitBltWithTranspColor(g_hCDCBuffer1, 48, 23 * iIdx + 52, 240, 23, g_hCDC_MenuGfx, 0, 36, RGB(0x00, 0xFF, 0x00));
+                BitBltWithTranspColor(g_hDcBuffer1, 48, 23 * iIdx + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0x00, 0xFF, 0x00));
             }
 
             // Blit bottom menu part
-            BitBltWithTranspColor(g_hCDCBuffer1, 48, 23 * iIdx + 52, 240, 20, g_hCDC_MenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));
+            BitBltWithTranspColor(g_hDcBuffer1, 48, 23 * iIdx + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));
 
-            BitBlt(g_hMainDC, 48, 16, 240, 171, g_hCDCBuffer1, 48, 16, SRCCOPY);
+            BitBlt(g_hMainDc, 48, 16, 240, 171, g_hDcBuffer1, 48, 16, SRCCOPY);
             g_sPoint.x = 52;
             g_sPoint.y = 58;
             ClientToScreen(g_hMainWindow, &g_sPoint);
             SetCursorPos(g_sPoint.x, g_sPoint.y);
 
             g_sIntermediateResult = ProcessMenu(60, 54, 5, (const TCHAR *)g_pptStartMenuStrs);
-            BitBlt(g_hCDCBuffer1, 48, 16, 240, 171, g_hMainDC, 48, 16, SRCCOPY);
+            BitBlt(g_hDcBuffer1, 48, 16, 240, 171, g_hMainDc, 48, 16, SRCCOPY);
             if (g_sIntermediateResult == -1){
                 RestoreImage(48, 16, 240, 171, 48, 16);
                 RestoreImage(16, 400, 64, 64, 16, 400);
@@ -5643,12 +5644,12 @@ short ProcessMainStartMenu()
                 break;
             }
             if (g_sIntermediateResult == 1){    // Load selected
-                BitBltWithTranspColor(g_hCDCBuffer1, 150, 16, 240, 36, g_hCDC_MenuGfx, 0, 0, RGB(0x00, 0xFF, 0x00));
+                BitBltWithTranspColor(g_hDcBuffer1, 150, 16, 240, 36, g_hDcMenuGfx, 0, 0, RGB(0x00, 0xFF, 0x00));
                 for (g_iX = 0; g_iX < 10; g_iX++){
-                    BitBltWithTranspColor(g_hCDCBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hCDC_MenuGfx, 0, 36, RGB(0x00, 0xFF, 0x00));
+                    BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0x00, 0xFF, 0x00));
                 }
-                BitBltWithTranspColor(g_hCDCBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hCDC_MenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));
-                BitBlt(g_hMainDC, 150, 16, 240, 286, g_hCDCBuffer1, 150, 16, SRCCOPY);
+                BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));
+                BitBlt(g_hMainDc, 150, 16, 240, 286, g_hDcBuffer1, 150, 16, SRCCOPY);
                 g_sPoint.x = 154;
                 g_sPoint.y = 58;
                 ClientToScreen(g_hMainWindow, &g_sPoint);
@@ -5676,12 +5677,12 @@ short ProcessMainStartMenu()
                 RestoreImage(48, 16, 390, 286, 48, 16);
             }
             if (g_sIntermediateResult == 2){    // Config selected
-                BitBltWithTranspColor(g_hCDCBuffer1, 150, 16, 240, 36, g_hCDC_MenuGfx, 0, 0, RGB(0x00, 0xFF, 0x00));
+                BitBltWithTranspColor(g_hDcBuffer1, 150, 16, 240, 36, g_hDcMenuGfx, 0, 0, RGB(0x00, 0xFF, 0x00));
                 for (g_iX = 0; g_iX < 4; g_iX++){
-                    BitBltWithTranspColor(g_hCDCBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hCDC_MenuGfx, 0, 36, RGB(0x00, 0xFF, 0x00));
+                    BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0x00, 0xFF, 0x00));
                 }
-                BitBltWithTranspColor(g_hCDCBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hCDC_MenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));
-                BitBlt(g_hMainDC, 150, 16, 240, 286, g_hCDCBuffer1, 150, 16, SRCCOPY);
+                BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));
+                BitBlt(g_hMainDc, 150, 16, 240, 286, g_hDcBuffer1, 150, 16, SRCCOPY);
                 g_sPoint.x = 154;
                 g_sPoint.y = 58;
                 ClientToScreen(g_hMainWindow, &g_sPoint);
@@ -5725,13 +5726,13 @@ short ProcessMainStartMenu()
             {
                 if (g_sIntermediateResult != 3) // Error in selection
                     return 0;
-                BitBltWithTranspColor(g_hCDCBuffer1, 150, 16, 240, 36, g_hCDC_MenuGfx, 0, 0, RGB(0x00, 0xFF, 0x00));
+                BitBltWithTranspColor(g_hDcBuffer1, 150, 16, 240, 36, g_hDcMenuGfx, 0, 0, RGB(0x00, 0xFF, 0x00));
                 for (g_iX = 0; g_iX < 2; g_iX++)
                 {
-                    BitBltWithTranspColor(g_hCDCBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hCDC_MenuGfx, 0, 36, RGB(0x00, 0xFF, 0x00));
+                    BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0x00, 0xFF, 0x00));
                 }
-                BitBltWithTranspColor(g_hCDCBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hCDC_MenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));
-                BitBlt(g_hMainDC, 150, 16, 240, 102, g_hCDCBuffer1, 150, 16, SRCCOPY);
+                BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));
+                BitBlt(g_hMainDc, 150, 16, 240, 102, g_hDcBuffer1, 150, 16, SRCCOPY);
                 g_sPoint.x = 154;
                 g_sPoint.y = 58;
                 ClientToScreen(g_hMainWindow, &g_sPoint);
@@ -5780,7 +5781,7 @@ int DimScreenToBlack()
 {
     int         iIdx1;
     int         iIdx2;
-    HDC         hCompatibleDC;
+    HDC         hCompatibleDc;
     HBITMAP     hBitmap;
     HBITMAP     hOldBitmap;
     BYTE        *pucBitmapArray;
@@ -5805,12 +5806,12 @@ int DimScreenToBlack()
         sBitmapFile.bmi.bmiHeader.biClrUsed = 0;
         sBitmapFile.bmi.bmiHeader.biClrImportant = 0;
 
-        hBitmap = CreateDIBSection(g_hCDCBuffer1, &sBitmapFile.bmi, 0, (void**)&pucBitmapArray, 0, 0);
+        hBitmap = CreateDIBSection(g_hDcBuffer1, &sBitmapFile.bmi, 0, (void**)&pucBitmapArray, 0, 0);
         if (hBitmap){
-            hCompatibleDC = CreateCompatibleDC(g_hCDCBuffer1);
-            hOldBitmap = (HBITMAP)SelectObject(hCompatibleDC, hBitmap);
+            hCompatibleDc = CreateCompatibleDC(g_hDcBuffer1);
+            hOldBitmap = (HBITMAP)SelectObject(hCompatibleDc, hBitmap);
 
-            BitBlt(hCompatibleDC, 0, 0, 640, 480, g_hCDCBuffer1, 0, 0, SRCCOPY);
+            BitBlt(hCompatibleDc, 0, 0, 640, 480, g_hDcBuffer1, 0, 0, SRCCOPY);
 
             for (iIdx1 = 0; iIdx1 < 16; iIdx1++){
                 for (iIdx2 = 0; iIdx2 < 640 * 480 * 3; iIdx2++){
@@ -5818,13 +5819,13 @@ int DimScreenToBlack()
                     if (sComponentVal < 0) sComponentVal = 0;
                     pucBitmapArray[iIdx2] = (BYTE)sComponentVal;
                 }
-                BitBlt(g_hCDCBuffer1, 0, 0, 640, 480, hCompatibleDC, 0, 0, SRCCOPY);
-                BitBlt(g_hMainDC, 0, 0, 640, 480, g_hCDCBuffer1, 0, 0, SRCCOPY);
+                BitBlt(g_hDcBuffer1, 0, 0, 640, 480, hCompatibleDc, 0, 0, SRCCOPY);
+                BitBlt(g_hMainDc, 0, 0, 640, 480, g_hDcBuffer1, 0, 0, SRCCOPY);
 
                 Sleep(20);
             }
-            DeleteObject(SelectObject(hCompatibleDC, (HGDIOBJ)hOldBitmap));
-            DeleteDC(hCompatibleDC);
+            DeleteObject(SelectObject(hCompatibleDc, (HGDIOBJ)hOldBitmap));
+            DeleteDC(hCompatibleDc);
 
             Sleep(80);
         }
@@ -5837,7 +5838,7 @@ int DimmScreenToWhite()
 {
     int         iIdx1;
     int         iIdx2;
-    HDC         hCompatibleDC;
+    HDC         hCompatibleDc;
     HBITMAP     hBitmap;
     HBITMAP     hOldBitmap;
     BITMAP_FILE sBitmapFile;
@@ -5862,12 +5863,12 @@ int DimmScreenToWhite()
         sBitmapFile.bmi.bmiHeader.biClrUsed = 0;
         sBitmapFile.bmi.bmiHeader.biClrImportant = 0;
 
-        hBitmap = CreateDIBSection(g_hCDCBuffer1, &sBitmapFile.bmi, 0, (void**)&pucBitmapArray, 0, 0);
+        hBitmap = CreateDIBSection(g_hDcBuffer1, &sBitmapFile.bmi, 0, (void**)&pucBitmapArray, 0, 0);
         if (hBitmap){
-            hCompatibleDC = CreateCompatibleDC(g_hCDCBuffer1);
-            hOldBitmap = (HBITMAP)SelectObject(hCompatibleDC, hBitmap);
+            hCompatibleDc = CreateCompatibleDC(g_hDcBuffer1);
+            hOldBitmap = (HBITMAP)SelectObject(hCompatibleDc, hBitmap);
 
-            BitBlt(hCompatibleDC, 0, 0, 640, 480, g_hCDCBuffer1, 0, 0, SRCCOPY);
+            BitBlt(hCompatibleDc, 0, 0, 640, 480, g_hDcBuffer1, 0, 0, SRCCOPY);
 
             for (iIdx1 = 0; iIdx1 < 16; iIdx1++){
                 for (iIdx2 = 0; iIdx2 < 640 * 480 * 3; iIdx2++){
@@ -5875,13 +5876,13 @@ int DimmScreenToWhite()
                     if (sComponentVal > 255) sComponentVal = 255;
                     pucBitmapArray[iIdx2] = (BYTE)sComponentVal;
                 }
-                BitBlt(g_hCDCBuffer1, 0, 0, 640, 480, hCompatibleDC, 0, 0, SRCCOPY);
-                BitBlt(g_hMainDC, 0, 0, 640, 480, g_hCDCBuffer1, 0, 0, SRCCOPY);
+                BitBlt(g_hDcBuffer1, 0, 0, 640, 480, hCompatibleDc, 0, 0, SRCCOPY);
+                BitBlt(g_hMainDc, 0, 0, 640, 480, g_hDcBuffer1, 0, 0, SRCCOPY);
 
                 Sleep(20);
             }
-            DeleteObject(SelectObject(hCompatibleDC, (HGDIOBJ)hOldBitmap));
-            DeleteDC(hCompatibleDC);
+            DeleteObject(SelectObject(hCompatibleDc, (HGDIOBJ)hOldBitmap));
+            DeleteDC(hCompatibleDc);
 
             Sleep(80);
         }
@@ -5969,7 +5970,7 @@ int MarkCGAsSeen(const char *pcFileToFind)
 DWORD SaveScreenshot(HDC hdcSrc, BITMAP_FILE *lpBuffer)
 {
     DWORD   dwResult;
-    HDC     hCDCSrc;
+    HDC     hDcSrc;
     HBITMAP hBitmap;
     HBITMAP hBitmap_Old;
     int     iFileIdx;
@@ -6003,13 +6004,13 @@ DWORD SaveScreenshot(HDC hdcSrc, BITMAP_FILE *lpBuffer)
             hBitmap = CreateDIBSection(hdcSrc, &lpBuffer->bmi, 0, &ppvBits, 0, 0);
             if (hBitmap)
             {
-                hCDCSrc = CreateCompatibleDC(hdcSrc);
-                hBitmap_Old = (HBITMAP)SelectObject(hCDCSrc, hBitmap);
+                hDcSrc = CreateCompatibleDC(hdcSrc);
+                hBitmap_Old = (HBITMAP)SelectObject(hDcSrc, hBitmap);
 
-                BitBlt(hCDCSrc, 0, 0, 576, 376, hdcSrc, 32, 8, SRCCOPY);
+                BitBlt(hDcSrc, 0, 0, 576, 376, hdcSrc, 32, 8, SRCCOPY);
                 memcpy((BYTE *)lpBuffer + lpBuffer->bmfh.bfOffBits, ppvBits, 576 * 376 * 3);
-                DeleteObject(SelectObject(hCDCSrc, hBitmap_Old));
-                DeleteDC(hCDCSrc);
+                DeleteObject(SelectObject(hDcSrc, hBitmap_Old));
+                DeleteDC(hDcSrc);
                 iFileIdx = 0;
                 while (1)
                 {
@@ -6058,14 +6059,14 @@ int ShowCredits()
     EraseBGBlitWEffects(eNoEffect);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("A"));
-    BitBlt(g_hCDCBuffer1, 32, 158, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 158, 576, 376, g_hCDCBuffer1, 32, 158, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 158, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 158, 576, 376, g_hDcBuffer1, 32, 158, SRCCOPY);
 
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("01"));
-    BitBlt(g_hCDCBuffer1, 32, 238, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 238, 576, 376, g_hCDCBuffer1, 32, 238, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 238, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 238, 576, 376, g_hDcBuffer1, 32, 238, SRCCOPY);
 
     Sleep(3000);
 
@@ -6079,14 +6080,14 @@ int ShowCredits()
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("B"));
-    BitBlt(g_hCDCBuffer1, 32, 158, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 158, 576, 376, g_hCDCBuffer1, 32, 158, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 158, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 158, 576, 376, g_hDcBuffer1, 32, 158, SRCCOPY);
 
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("02"));
-    BitBlt(g_hCDCBuffer1, 32, 238, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 238, 576, 376, g_hCDCBuffer1, 32, 238, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 238, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 238, 576, 376, g_hDcBuffer1, 32, 238, SRCCOPY);
 
     Sleep(3000);
 
@@ -6100,14 +6101,14 @@ int ShowCredits()
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("C"));
-    BitBlt(g_hCDCBuffer1, 32, 158, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 158, 576, 376, g_hCDCBuffer1, 32, 158, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 158, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 158, 576, 376, g_hDcBuffer1, 32, 158, SRCCOPY);
 
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("03"));
-    BitBlt(g_hCDCBuffer1, 32, 238, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 238, 576, 376, g_hCDCBuffer1, 32, 238, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 238, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 238, 576, 376, g_hDcBuffer1, 32, 238, SRCCOPY);
 
     Sleep(3000);
 
@@ -6121,14 +6122,14 @@ int ShowCredits()
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("D"));
-    BitBlt(g_hCDCBuffer1, 32, 158, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 158, 576, 376, g_hCDCBuffer1, 32, 158, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 158, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 158, 576, 376, g_hDcBuffer1, 32, 158, SRCCOPY);
 
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("04"));
-    BitBlt(g_hCDCBuffer1, 32, 238, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 238, 576, 376, g_hCDCBuffer1, 32, 238, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 238, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 238, 576, 376, g_hDcBuffer1, 32, 238, SRCCOPY);
 
     Sleep(3000u);
 
@@ -6142,14 +6143,14 @@ int ShowCredits()
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("E"));
-    BitBlt(g_hCDCBuffer1, 32, 158, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 158, 576, 376, g_hCDCBuffer1, 32, 158, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 158, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 158, 576, 376, g_hDcBuffer1, 32, 158, SRCCOPY);
 
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("05"));
-    BitBlt(g_hCDCBuffer1, 32, 238, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 238, 576, 376, g_hCDCBuffer1, 32, 238, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 238, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 238, 576, 376, g_hDcBuffer1, 32, 238, SRCCOPY);
 
     Sleep(3000);
 
@@ -6163,14 +6164,14 @@ int ShowCredits()
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("F"));
-    BitBlt(g_hCDCBuffer1, 32, 158, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 158, 576, 376, g_hCDCBuffer1, 32, 158, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 158, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 158, 576, 376, g_hDcBuffer1, 32, 158, SRCCOPY);
 
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("06"));
-    BitBlt(g_hCDCBuffer1, 32, 238, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 238, 576, 376, g_hCDCBuffer1, 32, 238, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 238, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 238, 576, 376, g_hDcBuffer1, 32, 238, SRCCOPY);
 
     Sleep(3000);
 
@@ -6184,14 +6185,14 @@ int ShowCredits()
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("G"));
-    BitBlt(g_hCDCBuffer1, 32, 158, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 158, 576, 376, g_hCDCBuffer1, 32, 158, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 158, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 158, 576, 376, g_hDcBuffer1, 32, 158, SRCCOPY);
 
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("07"));
-    BitBlt(g_hCDCBuffer1, 32, 238, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 238, 576, 376, g_hCDCBuffer1, 32, 238, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 238, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 238, 576, 376, g_hDcBuffer1, 32, 238, SRCCOPY);
 
     Sleep(3000);
 
@@ -6205,14 +6206,14 @@ int ShowCredits()
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("H"));
-    BitBlt(g_hCDCBuffer1, 32, 158, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 158, 576, 376, g_hCDCBuffer1, 32, 158, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 158, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 158, 576, 376, g_hDcBuffer1, 32, 158, SRCCOPY);
 
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("08"));
-    BitBlt(g_hCDCBuffer1, 32, 238, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 238, 576, 376, g_hCDCBuffer1, 32, 238, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 238, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 238, 576, 376, g_hDcBuffer1, 32, 238, SRCCOPY);
 
     Sleep(3000);
 
@@ -6224,8 +6225,8 @@ int ShowCredits()
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("09"));
-    BitBlt(g_hCDCBuffer1, 32, 238, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 238, 576, 376, g_hCDCBuffer1, 32, 238, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 238, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 238, 576, 376, g_hDcBuffer1, 32, 238, SRCCOPY);
 
     Sleep(3000);
 
@@ -6237,8 +6238,8 @@ int ShowCredits()
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("10"));
-    BitBlt(g_hCDCBuffer1, 32, 238, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 238, 576, 376, g_hCDCBuffer1, 32, 238, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 238, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 238, 576, 376, g_hDcBuffer1, 32, 238, SRCCOPY);
 
     Sleep(3000);
 
@@ -6250,8 +6251,8 @@ int ShowCredits()
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("11"));
-    BitBlt(g_hCDCBuffer1, 32, 238, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 238, 576, 376, g_hCDCBuffer1, 32, 238, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 238, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 238, 576, 376, g_hDcBuffer1, 32, 238, SRCCOPY);
 
     Sleep(3000);
 
@@ -6264,14 +6265,14 @@ int ShowCredits()
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("I"));
-    BitBlt(g_hCDCBuffer1, 32, 158, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 158, 576, 376, g_hCDCBuffer1, 32, 158, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 158, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 158, 576, 376, g_hDcBuffer1, 32, 158, SRCCOPY);
 
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("12"));
-    BitBlt(g_hCDCBuffer1, 32, 238, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 238, 576, 376, g_hCDCBuffer1, 32, 238, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 238, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 238, 576, 376, g_hDcBuffer1, 32, 238, SRCCOPY);
 
     Sleep(3000);
 
@@ -6283,8 +6284,8 @@ int ShowCredits()
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("13"));
-    BitBlt(g_hCDCBuffer1, 32, 238, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 238, 576, 376, g_hCDCBuffer1, 32, 238, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 238, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 238, 576, 376, g_hDcBuffer1, 32, 238, SRCCOPY);
 
     Sleep(3000);
 
@@ -6296,8 +6297,8 @@ int ShowCredits()
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("14"));
-    BitBlt(g_hCDCBuffer1, 32, 238, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 238, 576, 376, g_hCDCBuffer1, 32, 238, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 238, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 238, 576, 376, g_hDcBuffer1, 32, 238, SRCCOPY);
 
     Sleep(3000);
 
@@ -6309,8 +6310,8 @@ int ShowCredits()
     Sleep(500);
 
     LoadAndBlitPicToBuf2(0, eMainScreen, _T("15"));
-    BitBlt(g_hCDCBuffer1, 32, 238, 576, 80, g_hCDCBuffer2, 0, 0, SRCCOPY);
-    BitBlt(g_hMainDC, 32, 238, 576, 376, g_hCDCBuffer1, 32, 238, SRCCOPY);
+    BitBlt(g_hDcBuffer1, 32, 238, 576, 80, g_hDcBuffer2, 0, 0, SRCCOPY);
+    BitBlt(g_hMainDc, 32, 238, 576, 376, g_hDcBuffer1, 32, 238, SRCCOPY);
 
     Sleep(3000);
 
