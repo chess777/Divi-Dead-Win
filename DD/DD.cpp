@@ -2185,8 +2185,7 @@ int InitializeGame(HWND hWnd)
         memcpy(&g_sSysFile, g_pvDataBuffer, sizeof(SysFileStruc));
     }
 
-    dwStartTime = GetTickCount();
-    UpdateTimeStamp(dwStartTime);
+    srand(GetTickCount());
 
     return 0;
 }
@@ -6393,10 +6392,4 @@ void SplitStringsToFitOnScreen(TCHAR *ptString)
             }
         }
     } while (!bLastString);
-}
-
-//----- (0040D4C0) --------------------------------------------------------
-void UpdateTimeStamp(DWORD ulTimeStamp)
-{
-    g_ulTimeStamp = ulTimeStamp;
 }
