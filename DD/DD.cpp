@@ -5934,26 +5934,26 @@ int MarkCGAsSeen(const char *pcFileToFind)
     int             iIdx;
     ArhiveFileEntry *pcFileInFList;
     bool            bFound;
+    char            pcNameToFind[MAX_ARCH_NAME_SIZE];
 
-    strncpy_s(g_pcFileToFind.pcFileName, MAX_ARCH_NAME_SIZE, "           ", MAX_ARCH_NAME_SIZE);
+    memcpy(pcNameToFind, "            ", MAX_ARCH_NAME_SIZE);
 
     for (iIdx = 0; iIdx < MAX_ARCH_NAME_SIZE; iIdx++){
         if (pcFileToFind[iIdx] == '.' || pcFileToFind[iIdx] == 0){
-            g_pcFileToFind.pcFileName[iIdx] = 0;
             break;
         }
-        g_pcFileToFind.pcFileName[iIdx] = pcFileToFind[iIdx];
+		pcNameToFind[iIdx] = pcFileToFind[iIdx];
     }
 
     pcFileInFList = g_pcFLIST;
     bFound = false;
 
     for (iIdx = 0; iIdx < FLIST_ENTRY_COUNT; iIdx++){
-        if (pcFileInFList[0].pcFileName[0] == '/'){
+        if (pcFileInFList->pcFileName[0] == '/'){
             iIdx = -1;
             break;
         }
-        if (strncmp(pcFileInFList[0].pcFileName, g_pcFileToFind.pcFileName, 12) == 0){
+        if (strncmp(pcFileInFList->pcFileName, pcNameToFind, 12) == 0){
             bFound = true;
             break;
         }
