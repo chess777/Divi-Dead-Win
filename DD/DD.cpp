@@ -55,10 +55,8 @@ TCHAR           g_pcWVFileName[MAX_PATH];
 ArhiveHdr       g_pcWVFileHdr;
 ArhiveFileEntry *g_pcWVArhiveFileTable;
 ArhiveFileEntry g_pcFLIST[FLIST_ENTRY_COUNT];
-short           g_sPicWidth = 640;
-short           g_sPicHeight = 480;
-int             g_iOriginX;
-int             g_iOriginY;
+OFFSET_STRUCT   g_sPicSize = { 640, 480 };
+POINT           g_sOrigin;
 OFFSET_STRUCT   g_psPicOriginPositions[6] = {
     0, 0,           // This part goes to the visible area
     640, 0,         // This part goes to the right from visible area
@@ -68,8 +66,6 @@ OFFSET_STRUCT   g_psPicOriginPositions[6] = {
 
 POINT           g_sTextWindowPos = { 112, 398 };
 
-int             g_iX;
-int             g_iY;
 short           g_sPicOffsetNum;
 int             g_iRequiredAction;
 HANDLE          g_hThread;
@@ -2051,8 +2047,7 @@ int InitializeGame(HWND hWnd)
     LOGFONT     sLF;
     int         iIdx;
     DWORD       dwCWDLength;
-    DWORD       dwStartTime;
-
+    
     SetMenu(hWnd, g_hMenu);
     g_hMainDc = GetWindowDC(hWnd);
     SetupOrigin(hWnd, g_hMainDc);
@@ -2781,8 +2776,8 @@ DWORD WINAPI MainGameThreadProc(LPVOID lpParameter)
                 MessageBox(g_hMainWindow, g_ptFullFileName, _T("DIVI-DEAD C'sWARE"), MB_OK);
             }
 
-            for (g_iX = 0; g_iX < sFlagVal; g_iX++){
-                g_sGameState.psFlags[sFlagIdx + g_iX] = sFlagResult;
+            for (int i = 0; i < sFlagVal; i++){
+                g_sGameState.psFlags[sFlagIdx + i] = sFlagResult;
             }
             continue;
 
@@ -3047,7 +3042,7 @@ DWORD WINAPI MainGameThreadProc(LPVOID lpParameter)
 
             EraseBGBlitWEffects(sFlagVal);
 
-            g_sPicOffsetNum = FindPicOrigin(g_sPicWidth, g_sPicHeight);
+            g_sPicOffsetNum = FindPicOrigin(g_sPicSize.x, g_sPicSize.y);
             if (g_sPicOffsetNum == 1){
                 strcpy_s(g_sGameState.pcBgPictureName, " ");
                 strcpy_s(g_sGameState.pcFgPictureName, " ");
@@ -3159,13 +3154,13 @@ DWORD WINAPI MainGameThreadProc(LPVOID lpParameter)
             continue;
 
         case 0x0030:    // Load pic origin and size
-            g_iOriginX = GET_WORD(g_pvScriptBuffer, g_iCurrPosInScript);
+            g_sOrigin.x = GET_WORD(g_pvScriptBuffer, g_iCurrPosInScript);
             g_iCurrPosInScript += 2;
-            g_iOriginY = GET_WORD(g_pvScriptBuffer, g_iCurrPosInScript);
+            g_sOrigin.y = GET_WORD(g_pvScriptBuffer, g_iCurrPosInScript);
             g_iCurrPosInScript += 2;
-            g_sPicWidth = GET_WORD(g_pvScriptBuffer, g_iCurrPosInScript);
+            g_sPicSize.x = GET_WORD(g_pvScriptBuffer, g_iCurrPosInScript);
             g_iCurrPosInScript += 2;
-            g_sPicHeight = GET_WORD(g_pvScriptBuffer, g_iCurrPosInScript);
+            g_sPicSize.y = GET_WORD(g_pvScriptBuffer, g_iCurrPosInScript);
             g_iCurrPosInScript += 2;
             continue;
 
@@ -3378,10 +3373,10 @@ DWORD WINAPI MainGameThreadProc(LPVOID lpParameter)
             sFlagIdx = GET_WORD(g_pvScriptBuffer, g_iCurrPosInScript);
             g_iCurrPosInScript += 2;
 
-            g_iOriginX = 32;
-            g_iOriginY = 8;
-            g_sPicWidth = 576;
-            g_sPicHeight = 376;
+            g_sOrigin.x = 32;
+            g_sOrigin.y = 8;
+            g_sPicSize.x = 576;
+            g_sPicSize.y = 376;
             CopyPictureWithTranspColor(eBottomFromScreen_Overlay, 0, 0);
             BlitPicWithEffects(sFlagIdx);
 
@@ -3397,18 +3392,18 @@ DWORD WINAPI MainGameThreadProc(LPVOID lpParameter)
             ConvertMBCSToUni(pcText, g_ptCvtString, CVT_BUF_SIZE);
             _tcsncpy_s(g_ptScriptName, MAX_PATH, g_ptCvtString, CVT_BUF_SIZE);
 
-            g_iOriginX = 32;
-            g_iOriginY = 8;
-            g_sPicWidth = 576;
-            g_sPicHeight = 376;
+            g_sOrigin.x = 32;
+            g_sOrigin.y = 8;
+            g_sPicSize.x = 576;
+            g_sPicSize.y = 376;
             CopyPictureWithTranspColor(eBottomFromScreen_Overlay, 0, 0);
 
             strcpy_s(g_sGameState.pcCharacter1Name, 32, " ");
             strcpy_s(g_sGameState.pcCharacter2Name, 32, " ");
             strcpy_s(g_sGameState.pcFgOverlayName, 32, " ");
 
-            g_sPicWidth = 288;
-            g_sPicHeight = 376;
+            g_sPicSize.x = 288;
+            g_sPicSize.y = 376;
             if (LoadPicWithTransparency(176, 8, g_ptScriptName)){
                 MessageBox(hWnd, _T("Cannot read CG"), _T("DIVI-DEAD C'sWARE"), MB_OK);
                 ChangeDisplaySettings(NULL, 0);
@@ -3416,10 +3411,10 @@ DWORD WINAPI MainGameThreadProc(LPVOID lpParameter)
                 ExitThread(0);
             }
             strcpy_s(g_sGameState.pcCharacter1Name, 32, pcText);
-            g_iOriginY = 8;
-            g_iOriginX = 320 - (g_sPicWidth / 2);
-            g_sPicWidth = 480;
-            g_sPicHeight = 376;
+            g_sOrigin.y = 8;
+            g_sOrigin.x = 320 - (g_sPicSize.x / 2);
+            g_sPicSize.x = 480;
+            g_sPicSize.y = 376;
             continue;
 
         case 0x004C:    // Show two personages on screen
@@ -3429,18 +3424,18 @@ DWORD WINAPI MainGameThreadProc(LPVOID lpParameter)
             ConvertMBCSToUni(pcText, g_ptCvtString, CVT_BUF_SIZE);
             _tcsncpy_s(g_ptScriptName, MAX_PATH, g_ptCvtString, CVT_BUF_SIZE);
 
-            g_iOriginX = 32;
-            g_iOriginY = 8;
-            g_sPicWidth = 576;
-            g_sPicHeight = 376;
+            g_sOrigin.x = 32;
+            g_sOrigin.y = 8;
+            g_sPicSize.x = 576;
+            g_sPicSize.y = 376;
             CopyPictureWithTranspColor(eBottomFromScreen_Overlay, 0, 0);
 
             strcpy_s(g_sGameState.pcCharacter1Name, 32, " ");
             strcpy_s(g_sGameState.pcCharacter2Name, 32, " ");
             strcpy_s(g_sGameState.pcFgOverlayName, 32, " ");
 
-            g_sPicWidth = 288;
-            g_sPicHeight = 376;
+            g_sPicSize.x = 288;
+            g_sPicSize.y = 376;
             if (LoadPicWithTransparency(32, 8, g_ptScriptName)){
                 MessageBox(hWnd, _T("Cannot read CG"), _T("DIVI-DEAD C'sWARE"), MB_OK);
                 ChangeDisplaySettings(NULL, 0);
@@ -3455,8 +3450,8 @@ DWORD WINAPI MainGameThreadProc(LPVOID lpParameter)
             ConvertMBCSToUni(pcText, g_ptCvtString, CVT_BUF_SIZE);
             _tcsncpy_s(g_ptPersonageOnScr2File, MAX_PATH, g_ptCvtString, CVT_BUF_SIZE);
 
-            g_sPicWidth = 288;
-            g_sPicHeight = 376;
+            g_sPicSize.x = 288;
+            g_sPicSize.y = 376;
             if (LoadPicWithTransparency(320, 8, g_ptPersonageOnScr2File)){
                 MessageBox(hWnd, _T("Cannot read CG"), _T("DIVI-DEAD C'sWARE"), MB_OK);
                 ChangeDisplaySettings(NULL, 0);
@@ -3465,30 +3460,30 @@ DWORD WINAPI MainGameThreadProc(LPVOID lpParameter)
             }
             strcpy_s(g_sGameState.pcCharacter2Name, 32, pcText);
 
-            g_iOriginX = 32;
-            g_iOriginY = 8;
-            g_sPicWidth = 576;
-            g_sPicHeight = 376;
+            g_sOrigin.x = 32;
+            g_sOrigin.y = 8;
+            g_sPicSize.x = 576;
+            g_sPicSize.y = 376;
             continue;
 
         case 0x004D:    // Show a light flash, the end of game
             LoadAndBlitPicToBuf2(0, eMainScreen, _T("I_20A"));
-            BlitFromBuffersToScreen(0, 0, g_sPicWidth, g_sPicHeight, 0, 0);
+            BlitFromBuffersToScreen(0, 0, g_sPicSize.x, g_sPicSize.y, 0, 0);
             Sleep(50);
             LoadAndBlitPicToBuf2(0, eMainScreen, _T("I_20B"));
-            BlitFromBuffersToScreen(0, 0, g_sPicWidth, g_sPicHeight, 0, 0);
+            BlitFromBuffersToScreen(0, 0, g_sPicSize.x, g_sPicSize.y, 0, 0);
             Sleep(50);
             LoadAndBlitPicToBuf2(0, eMainScreen, _T("I_20C"));
-            BlitFromBuffersToScreen(0, 0, g_sPicWidth, g_sPicHeight, 0, 0);
+            BlitFromBuffersToScreen(0, 0, g_sPicSize.x, g_sPicSize.y, 0, 0);
             Sleep(50);
             LoadAndBlitPicToBuf2(0, eMainScreen, _T("I_20D"));
-            BlitFromBuffersToScreen(0, 0, g_sPicWidth, g_sPicHeight, 0, 0);
+            BlitFromBuffersToScreen(0, 0, g_sPicSize.x, g_sPicSize.y, 0, 0);
             Sleep(50);
             LoadAndBlitPicToBuf2(0, eMainScreen, _T("I_20E"));
-            BlitFromBuffersToScreen(0, 0, g_sPicWidth, g_sPicHeight, 0, 0);
+            BlitFromBuffersToScreen(0, 0, g_sPicSize.x, g_sPicSize.y, 0, 0);
             Sleep(50);
             LoadAndBlitPicToBuf2(0, eMainScreen, _T("I_20F"));
-            BlitFromBuffersToScreen(0, 0, g_sPicWidth, g_sPicHeight, 0, 0);
+            BlitFromBuffersToScreen(0, 0, g_sPicSize.x, g_sPicSize.y, 0, 0);
 
             strcpy_s(g_sGameState.pcCharacter1Name, 32, " ");
             strcpy_s(g_sGameState.pcCharacter2Name, 32, " ");
@@ -3619,10 +3614,10 @@ void LoadSave(short sSaveFileToLoad)
     strcpy_s(g_sSysFile.pcCurrentGameTime, "           ");
     strncpy_s(g_sSysFile.pcCurrentGameTime, &g_sSysFile.pcSaveNames[sSaveFileToLoad][13], 12 - 1);
 
-    g_iOriginX = 0;
-    g_iOriginY = 0;
-    g_sPicWidth = 640;
-    g_sPicHeight = 480;
+    g_sOrigin.x = 0;
+    g_sOrigin.y = 0;
+    g_sPicSize.x = 640;
+    g_sPicSize.y = 480;
 
     EraseBGBlitWEffects(eHorizontalBlinds);
 
@@ -3639,8 +3634,8 @@ void LoadSave(short sSaveFileToLoad)
     BitBlt(g_hDcBuffer1, 0, 0, 640, 480, g_hDcBuffer2, 0, 0, SRCCOPY);
 
     if (g_sGameState.pcCharacter1Name[0] != ' '){
-        g_sPicWidth = PERSONAGE_SIZE_X;
-        g_sPicHeight = PERSONAGE_SIZE_Y;
+        g_sPicSize.x = PERSONAGE_SIZE_X;
+        g_sPicSize.y = PERSONAGE_SIZE_Y;
         if (g_sGameState.pcCharacter2Name[0] == ' '){
             iPosX = (GAME_SCREEN_SIZE_X - PERSONAGE_SIZE_X) / 2;
         }
@@ -3651,8 +3646,8 @@ void LoadSave(short sSaveFileToLoad)
         LoadPicWithTransparency(iPosX, PERSONAGE_POS_Y, g_ptCvtString);
     }
     if (g_sGameState.pcCharacter2Name[0] != ' '){
-        g_sPicWidth = PERSONAGE_SIZE_X;
-        g_sPicHeight = PERSONAGE_SIZE_Y;
+        g_sPicSize.x = PERSONAGE_SIZE_X;
+        g_sPicSize.y = PERSONAGE_SIZE_Y;
         ConvertMBCSToUni(g_sGameState.pcCharacter2Name, g_ptCvtString, CVT_BUF_SIZE);
         LoadPicWithTransparency(GAME_SCREEN_SIZE_X / 2, PERSONAGE_POS_Y, g_ptCvtString);
     }
@@ -3666,10 +3661,10 @@ void LoadSave(short sSaveFileToLoad)
         PlayMidiFile(g_ptCvtString, true);
     }
 
-    g_iOriginX = 0;
-    g_iOriginY = 0;
-    g_sPicWidth = 640;
-    g_sPicHeight = 480;
+    g_sOrigin.x = 0;
+    g_sOrigin.y = 0;
+    g_sPicSize.x = 640;
+    g_sPicSize.y = 480;
 
     BlitPicWithEffects(eHorizontalBlinds);
 }
@@ -4036,15 +4031,15 @@ int FindPicOrigin(short sWidth, short sHeight)
 
     for (iIdx = 0; psPicSizes[iIdx].x != -1; iIdx++){
         if (sWidth == psPicSizes[iIdx].x && sHeight == psPicSizes[iIdx].y){
-            g_iOriginX = psPicOrigins[iIdx].x;
-            g_iOriginY = psPicOrigins[iIdx].y;
+            g_sOrigin.x = psPicOrigins[iIdx].x;
+            g_sOrigin.y = psPicOrigins[iIdx].y;
             break;
         }
     }
 
     if (psPicSizes[iIdx].x == -1){
-        g_iOriginX = 0;
-        g_iOriginY = 0;
+        g_sOrigin.x = 0;
+        g_sOrigin.y = 0;
         return 0;
     }
 
@@ -4082,14 +4077,14 @@ bool LoadAndBlitPicToBuf2(int a1, unsigned short iOriginPos, const TCHAR *cptFil
         return true;
     }
 
-    g_sPicWidth = (short)psBF->bmi.bmiHeader.biWidth;   // Used
-    g_sPicHeight = (short)psBF->bmi.bmiHeader.biHeight;
+    g_sPicSize.x = (short)psBF->bmi.bmiHeader.biWidth;   // Used
+    g_sPicSize.y = (short)psBF->bmi.bmiHeader.biHeight;
     g_sPicOffsetNum = FindPicOrigin((short)psBF->bmi.bmiHeader.biWidth, (short)psBF->bmi.bmiHeader.biHeight);
 
     StretchDIBits(
         g_hDcBuffer2,
-        g_iOriginX + g_psPicOriginPositions[iOriginPos].x,
-        g_iOriginY + g_psPicOriginPositions[iOriginPos].y,
+        g_sOrigin.x + g_psPicOriginPositions[iOriginPos].x,
+        g_sOrigin.y + g_psPicOriginPositions[iOriginPos].y,
         psBF->bmi.bmiHeader.biWidth,
         psBF->bmi.bmiHeader.biHeight,
         0,
@@ -4205,22 +4200,22 @@ void CopyPictureWithTranspColor(unsigned short TransferSource, unsigned short xO
 
     switch (TransferSource){
     case eRightFromScreen_TranspOverlay:
-        crTranspColor = GetPixel(g_hDcBuffer2, g_iOriginX + g_psPicOriginPositions[TransferSource].x, g_iOriginY + g_psPicOriginPositions[TransferSource].y);
+        crTranspColor = GetPixel(g_hDcBuffer2, g_sOrigin.x + g_psPicOriginPositions[TransferSource].x, g_sOrigin.y + g_psPicOriginPositions[TransferSource].y);
 
         BitBltWithTranspColor(
             g_hDcBuffer2,
-            g_iOriginX + xOffs, g_iOriginY + yOffs, g_sPicWidth, g_sPicHeight,
+            g_sOrigin.x + xOffs, g_sOrigin.y + yOffs, g_sPicSize.x, g_sPicSize.y,
             g_hDcBuffer2,
-            g_iOriginX + g_psPicOriginPositions[TransferSource].x, g_iOriginY + g_psPicOriginPositions[TransferSource].y,
+            g_sOrigin.x + g_psPicOriginPositions[TransferSource].x, g_sOrigin.y + g_psPicOriginPositions[TransferSource].y,
             crTranspColor);
         break;
 
     case eBottomFromScreen_Overlay:
     case eRightAndBottomFromScreen_BG:
         BitBlt(g_hDcBuffer2,
-            g_iOriginX + xOffs, g_iOriginY + yOffs, g_sPicWidth, g_sPicHeight,
+            g_sOrigin.x + xOffs, g_sOrigin.y + yOffs, g_sPicSize.x, g_sPicSize.y,
             g_hDcBuffer2,
-            g_iOriginX + g_psPicOriginPositions[TransferSource].x, g_iOriginY + g_psPicOriginPositions[TransferSource].y,
+            g_sOrigin.x + g_psPicOriginPositions[TransferSource].x, g_sOrigin.y + g_psPicOriginPositions[TransferSource].y,
             SRCCOPY);
         break;
 
@@ -4267,12 +4262,12 @@ void BlitPicWithEffects(short sEffect)
 
     switch (sEffect){
     case eNoEffect: // Blit with no effects
-        BlitFromBuffersToScreen(0, 0, g_sPicWidth, g_sPicHeight, 0, 0);
+        BlitFromBuffersToScreen(0, 0, g_sPicSize.x, g_sPicSize.y, 0, 0);
         break;
 
     case eOrderedBlocks:    // Blit with effect: interleaved 8 pixel blocks appearing from left to right
-        iXBlockCount = g_sPicWidth / 8;
-        iYBlockCount = g_sPicHeight / 8;
+        iXBlockCount = g_sPicSize.x / 8;
+        iYBlockCount = g_sPicSize.y / 8;
         iStepCount = iYBlockCount * iXBlockCount;
         iYIdx2 = iYBlockCount;
 
@@ -4311,14 +4306,14 @@ void BlitPicWithEffects(short sEffect)
         break;
 
     case eHorizontalBlinds: // Blit with effect: horizontal blinds rolling down by 1 pixel in 16 pixel steps
-        iStepCount = (g_sPicHeight / 16) + 16;
+        iStepCount = (g_sPicSize.y / 16) + 16;
         if (iStepCount > 0){
             for (iYIdx1 = 0; iYIdx1 <= iStepCount; iYIdx1++){
                 Sleep(20);
                 for (iYIdx2 = 0; iYIdx2 <= iYIdx1; iYIdx2++){
                     iYPos = iYIdx1 + 16 * iYIdx2;
-                    if (iYPos < g_sPicHeight){
-                        BlitFromBuffersToScreen(0, iYPos, g_sPicWidth, 1, 0, iYPos);
+                    if (iYPos < g_sPicSize.y){
+                        BlitFromBuffersToScreen(0, iYPos, g_sPicSize.x, 1, 0, iYPos);
                     }
                 }
             }
@@ -4327,18 +4322,18 @@ void BlitPicWithEffects(short sEffect)
 
     case eHorizontalBlindsCrossing: // Blit with effect: horizontal blinds rolling from top and bottom by 2 pixels
         iTopIndex = 0;
-        iBottomIndex = g_sPicHeight + 2;
-        iYIdx1 = g_sPicHeight / 4 + 1;
+        iBottomIndex = g_sPicSize.y + 2;
+        iYIdx1 = g_sPicSize.y / 4 + 1;
 
         for (iYIdx2 = 0; iYIdx2 < iYIdx1; iYIdx2++){
             if (!(iYIdx2 % 2)){
                 Sleep(EFFECTS_DELAY);
             }
-            if (iTopIndex < g_sPicHeight){
-                BlitFromBuffersToScreen(0, iTopIndex, g_sPicWidth, 2, 0, iTopIndex);
+            if (iTopIndex < g_sPicSize.y){
+                BlitFromBuffersToScreen(0, iTopIndex, g_sPicSize.x, 2, 0, iTopIndex);
             }
-            if (iBottomIndex < g_sPicHeight){
-                BlitFromBuffersToScreen(0, iBottomIndex, g_sPicWidth, 2, 0, iBottomIndex);
+            if (iBottomIndex < g_sPicSize.y){
+                BlitFromBuffersToScreen(0, iBottomIndex, g_sPicSize.x, 2, 0, iBottomIndex);
             }
             iBottomIndex -= 4;
             iTopIndex += 4;
@@ -4346,23 +4341,23 @@ void BlitPicWithEffects(short sEffect)
         break;
 
     case eVerticalBlinds:   // Blit with effect: vertical blinds rolling from left to right by 1 pixel in 8 pixel steps
-        iStepCount = g_sPicWidth / 8;
+        iStepCount = g_sPicSize.x / 8;
         for (iYIdx1 = 0; iYIdx1 < 8; iYIdx1++){
             for (iYIdx2 = 0; iYIdx2 < iStepCount; iYIdx2++){
                 iXpos = iYIdx1 + 8 * iYIdx2;
-                if (iXpos < g_sPicWidth){
-                    //BitBlt(g_hDCBuffer1, g_iOriginX + iXpos, g_iOriginY, 1, g_sPicHeight, g_hDCBuffer2, g_iOriginX + iXpos, g_iOriginY, SRCCOPY);
-                    BlitFromBuffersToScreen(iXpos, 0, 1, g_sPicHeight, iXpos, 0);
+                if (iXpos < g_sPicSize.x){
+                    //BitBlt(g_hDCBuffer1, g_sOrigin.x + iXpos, g_sOrigin.y, 1, g_sPicSize.y, g_hDCBuffer2, g_sOrigin.x + iXpos, g_sOrigin.y, SRCCOPY);
+                    BlitFromBuffersToScreen(iXpos, 0, 1, g_sPicSize.y, iXpos, 0);
                 }
             }
-            //BitBlt(g_hMainDC, g_iOriginX, g_iOriginY, g_sPicWidth, g_sPicHeight, g_hDCBuffer1, g_iOriginX, g_iOriginY, SRCCOPY);
-            BlitFromBuffersToScreen(0, 0, g_sPicWidth, g_sPicHeight, 0, 0);
+            //BitBlt(g_hMainDC, g_sOrigin.x, g_sOrigin.y, g_sPicSize.x, g_sPicSize.y, g_hDCBuffer1, g_sOrigin.x, g_sOrigin.y, SRCCOPY);
+            BlitFromBuffersToScreen(0, 0, g_sPicSize.x, g_sPicSize.y, 0, 0);
             Sleep(EFFECTS_DELAY);
         }
         break;
 
     default:
-        BlitFromBuffersToScreen(0, 0, g_sPicWidth, g_sPicHeight, 0, 0);
+        BlitFromBuffersToScreen(0, 0, g_sPicSize.x, g_sPicSize.y, 0, 0);
         break;
     }
 
@@ -4379,8 +4374,8 @@ BOOL BlitFromBuffersToScreen(int iDstX, int iDstY, int iCX, int iCY, int iSrcX, 
     else
         iRop = SRCCOPY;
 
-    BitBlt(g_hDcBuffer1, g_iOriginX + iDstX, g_iOriginY + iDstY, iCX, iCY, g_hDcBuffer2, g_iOriginX + iSrcX, g_iOriginY + iSrcY, iRop);
-    return BitBlt(g_hMainDc, g_iOriginX + iDstX, g_iOriginY + iDstY, iCX, iCY, g_hDcBuffer1, g_iOriginX + iSrcX, g_iOriginY + iSrcY, iRop);
+    BitBlt(g_hDcBuffer1, g_sOrigin.x + iDstX, g_sOrigin.y + iDstY, iCX, iCY, g_hDcBuffer2, g_sOrigin.x + iSrcX, g_sOrigin.y + iSrcY, iRop);
+    return BitBlt(g_hMainDc, g_sOrigin.x + iDstX, g_sOrigin.y + iDstY, iCX, iCY, g_hDcBuffer1, g_sOrigin.x + iSrcX, g_sOrigin.y + iSrcY, iRop);
 }
 
 //----- (00407540) --------------------------------------------------------
@@ -4456,6 +4451,7 @@ int BitBltWithTranspColor(HDC hdcDst, unsigned short usDstX, unsigned short usDs
 //----- (004078F0) --------------------------------------------------------
 short ProcessInGameMenu()
 {
+    int i;
     int iYIdx;
     short result;
     int iXOffset;
@@ -4510,10 +4506,10 @@ short ProcessInGameMenu()
             g_sPrevKeyCommand = EMPTY_MASK;
             WavePlaybackCtrl(NULL, eWAVE_Stop);
             StopMidiPlayback();
-            g_iOriginX = 0;
-            g_iOriginY = 0;
-            g_sPicWidth = 640;
-            g_sPicHeight = 480;
+            g_sOrigin.x = 0;
+            g_sOrigin.y = 0;
+            g_sPicSize.x = 640;
+            g_sPicSize.y = 480;
             EraseBGBlitWEffects(eHorizontalBlinds);
             if (LoadScriptFile(g_ptStartScriptFile)){
                 result = 3;
@@ -4527,10 +4523,10 @@ short ProcessInGameMenu()
         }
         if (g_sIntermediateResult == 1){
             BitBltWithTranspColor(g_hDcBuffer1, 150, 16, 240, 36, g_hDcMenuGfx, 0, 0, RGB(0, 255, 0));
-            for (g_iX = 0; g_iX < 10; g_iX++){
-                BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0, 255, 0));
+            for (i = 0; i < 10; i++){
+                BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * i + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0, 255, 0));
             }
-            BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0, 255, 0));
+            BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * i + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0, 255, 0));
             BitBlt(g_hMainDc, 150, 16, 240, 286, g_hDcBuffer1, 150, 16, SRCCOPY);
 
             g_sCursorPos.x = 154;
@@ -4538,10 +4534,10 @@ short ProcessInGameMenu()
             ClientToScreen(g_hMainWindow, &g_sCursorPos);
             SetCursorPos(g_sCursorPos.x, g_sCursorPos.y);
 
-            for (g_iX = 0; g_iX < SAVE_SLOT_COUNT; g_iX++){
-                ConvertMBCSToUni(g_sSysFile.pcSaveNames[g_iX], g_ptSaveLoadMenuStrings[g_iX], 25);
+            for (i = 0; i < SAVE_SLOT_COUNT; i++){
+                ConvertMBCSToUni(g_sSysFile.pcSaveNames[i], g_ptSaveLoadMenuStrings[i], 25);
             }
-            g_ptSaveLoadMenuStrings[g_iX][0] = _T('\x00');
+            g_ptSaveLoadMenuStrings[i][0] = _T('\x00');
 
             g_sIntermediateResult = ProcessMenu(162, 54, 10, (const TCHAR *)g_ptSaveLoadMenuStrings);
 
@@ -4566,10 +4562,10 @@ short ProcessInGameMenu()
         }
         if (g_sIntermediateResult == 2){
             BitBltWithTranspColor(g_hDcBuffer1, 150, 16, 240, 36, g_hDcMenuGfx, 0, 0, RGB(0, 255, 0));
-            for (g_iX = 0; g_iX < 10; g_iX++){
-                BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0, 255, 0));
+            for (i = 0; i < 10; i++){
+                BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * i + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0, 255, 0));
             }
-            BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0, 255, 0));
+            BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * i + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0, 255, 0));
             BitBlt(g_hMainDc, 150, 16, 240, 286, g_hDcBuffer1, 150, 16, SRCCOPY);
 
             g_sCursorPos.x = 154;
@@ -4577,10 +4573,10 @@ short ProcessInGameMenu()
             ClientToScreen(g_hMainWindow, &g_sCursorPos);
             SetCursorPos(g_sCursorPos.x, g_sCursorPos.y);
 
-            for (g_iX = 0; g_iX < SAVE_SLOT_COUNT; g_iX++){
-                ConvertMBCSToUni(g_sSysFile.pcSaveNames[g_iX], g_ptSaveLoadMenuStrings[g_iX], 25);
+            for (i = 0; i < SAVE_SLOT_COUNT; i++){
+                ConvertMBCSToUni(g_sSysFile.pcSaveNames[i], g_ptSaveLoadMenuStrings[i], 25);
             }
-            g_ptSaveLoadMenuStrings[g_iX][0] = _T('\x00');
+            g_ptSaveLoadMenuStrings[i][0] = _T('\x00');
 
             g_sIntermediateResult = ProcessMenu(162, 54, 10, (const TCHAR *)g_ptSaveLoadMenuStrings);
             if (g_sIntermediateResult != -1){
@@ -4601,10 +4597,10 @@ short ProcessInGameMenu()
         }
         if (g_sIntermediateResult == 3){
             BitBltWithTranspColor(g_hDcBuffer1, 150, 16, 240, 36, g_hDcMenuGfx, 0, 0, RGB(0, 255, 0));
-            for (g_iX = 0; g_iX < 4; g_iX++){
-                BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0, 255, 0));
+            for (i = 0; i < 4; i++){
+                BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * i + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0, 255, 0));
             }
-            BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0, 255, 0));
+            BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * i + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0, 255, 0));
             BitBlt(g_hMainDc, 150, 16, 240, 286, g_hDcBuffer1, 150, 16, SRCCOPY);
 
             g_sCursorPos.x = 154;
@@ -4655,10 +4651,10 @@ short ProcessInGameMenu()
         }
 
         BitBltWithTranspColor(g_hDcBuffer1, 150, 16, 240, 36, g_hDcMenuGfx, 0, 0, RGB(0, 255, 0));
-        for (g_iX = 0; g_iX < 2; g_iX++){
-            BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0, 255, 0));
+        for (i = 0; i < 2; i++){
+            BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * i + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0, 255, 0));
         }
-        BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0, 255, 0));
+        BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * i + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0, 255, 0));
         BitBlt(g_hMainDc, 150, 16, 240, 102, g_hDcBuffer1, 150, 16, SRCCOPY);
 
         g_sCursorPos.x = 154;
@@ -5537,25 +5533,26 @@ short VideoModeAndIntro()
 //----- (0040B590) --------------------------------------------------------
 short ProcessMainStartMenu()
 {
+    int     i;
     short   sKeyCommand;
     int     iPicPosX;
     bool    bRestart;
     int     iIdx;
     short   sResult;
 
-    g_iOriginX = 0;
-    g_iOriginY = 0;
-    g_sPicWidth = 640;
-    g_sPicHeight = 480;
+    g_sOrigin.x = 0;
+    g_sOrigin.y = 0;
+    g_sPicSize.x = 640;
+    g_sPicSize.y = 480;
     EraseBGBlitWEffects(eNoEffect);
     LoadAndBlitPicToBuf2(0, eRightAndBottomFromScreen_BG, _T("WAKU_A1"));
     CopyPictureWithTranspColor(eRightAndBottomFromScreen_BG, 0, 0);
     LoadAndBlitPicToBuf2(0, eBottomFromScreen_Overlay, _T("TITLE"));
     CopyPictureWithTranspColor(eBottomFromScreen_Overlay, 0, 0);
-    g_iOriginX = 0;
-    g_iOriginY = 0;
-    g_sPicWidth = 640;
-    g_sPicHeight = 480;
+    g_sOrigin.x = 0;
+    g_sOrigin.y = 0;
+    g_sPicSize.x = 640;
+    g_sPicSize.y = 480;
     BlitPicWithEffects(eHorizontalBlinds);
 
     do{
@@ -5628,20 +5625,20 @@ short ProcessMainStartMenu()
             }
             if (g_sIntermediateResult == 1){    // Load selected
                 BitBltWithTranspColor(g_hDcBuffer1, 150, 16, 240, 36, g_hDcMenuGfx, 0, 0, RGB(0x00, 0xFF, 0x00));
-                for (g_iX = 0; g_iX < 10; g_iX++){
-                    BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0x00, 0xFF, 0x00));
+                for (i = 0; i < 10; i++){
+                    BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * i + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0x00, 0xFF, 0x00));
                 }
-                BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));
+                BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * i + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));
                 BitBlt(g_hMainDc, 150, 16, 240, 286, g_hDcBuffer1, 150, 16, SRCCOPY);
                 g_sCursorPos.x = 154;
                 g_sCursorPos.y = 58;
                 ClientToScreen(g_hMainWindow, &g_sCursorPos);
                 SetCursorPos(g_sCursorPos.x, g_sCursorPos.y);
 
-                for (g_iX = 0; g_iX < SAVE_SLOT_COUNT; g_iX++){
-                    ConvertMBCSToUni(g_sSysFile.pcSaveNames[g_iX], g_ptSaveLoadMenuStrings[g_iX], 25);
+                for (i = 0; i < SAVE_SLOT_COUNT; i++){
+                    ConvertMBCSToUni(g_sSysFile.pcSaveNames[i], g_ptSaveLoadMenuStrings[i], 25);
                 }
-                g_ptSaveLoadMenuStrings[g_iX][0] = _T('\x00');
+                g_ptSaveLoadMenuStrings[i][0] = _T('\x00');
 
                 g_sIntermediateResult = ProcessMenu(162, 54, 10, (const TCHAR *)g_ptSaveLoadMenuStrings);
                 if (g_sIntermediateResult != -1){
@@ -5661,10 +5658,10 @@ short ProcessMainStartMenu()
             }
             if (g_sIntermediateResult == 2){    // Config selected
                 BitBltWithTranspColor(g_hDcBuffer1, 150, 16, 240, 36, g_hDcMenuGfx, 0, 0, RGB(0x00, 0xFF, 0x00));
-                for (g_iX = 0; g_iX < 4; g_iX++){
-                    BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0x00, 0xFF, 0x00));
+                for (i = 0; i < 4; i++){
+                    BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * i + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0x00, 0xFF, 0x00));
                 }
-                BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));
+                BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * i + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));
                 BitBlt(g_hMainDc, 150, 16, 240, 286, g_hDcBuffer1, 150, 16, SRCCOPY);
                 g_sCursorPos.x = 154;
                 g_sCursorPos.y = 58;
@@ -5710,11 +5707,11 @@ short ProcessMainStartMenu()
                 if (g_sIntermediateResult != 3) // Error in selection
                     return 0;
                 BitBltWithTranspColor(g_hDcBuffer1, 150, 16, 240, 36, g_hDcMenuGfx, 0, 0, RGB(0x00, 0xFF, 0x00));
-                for (g_iX = 0; g_iX < 2; g_iX++)
+                for (i = 0; i < 2; i++)
                 {
-                    BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0x00, 0xFF, 0x00));
+                    BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * i + 52, 240, 23, g_hDcMenuGfx, 0, 36, RGB(0x00, 0xFF, 0x00));
                 }
-                BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));
+                BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * i + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));
                 BitBlt(g_hMainDc, 150, 16, 240, 102, g_hDcBuffer1, 150, 16, SRCCOPY);
                 g_sCursorPos.x = 154;
                 g_sCursorPos.y = 58;
@@ -5742,10 +5739,10 @@ short ProcessMainStartMenu()
     g_sPrevKeyCommand = EMPTY_MASK;
     WavePlaybackCtrl(NULL, eWAVE_Stop);
     StopMidiPlayback();
-    g_iOriginX = 0;
-    g_iOriginY = 0;
-    g_sPicWidth = 640;
-    g_sPicHeight = 480;
+    g_sOrigin.x = 0;
+    g_sOrigin.y = 0;
+    g_sPicSize.x = 640;
+    g_sPicSize.y = 480;
     EraseBGBlitWEffects(eHorizontalBlinds);
     if (LoadScriptFile(g_ptStartScriptFile))
     {
@@ -6034,10 +6031,10 @@ int ShowCredits()
 {
     Sleep(100);
 
-    g_iOriginX = 0;
-    g_iOriginY = 0;
-    g_sPicWidth = 640;
-    g_sPicHeight = 480;
+    g_sOrigin.x = 0;
+    g_sOrigin.y = 0;
+    g_sPicSize.x = 640;
+    g_sPicSize.y = 480;
 
     EraseBGBlitWEffects(eNoEffect);
 
@@ -6053,10 +6050,10 @@ int ShowCredits()
 
     Sleep(3000);
 
-    g_iOriginX = 32;
-    g_iOriginY = 8;
-    g_sPicWidth = 576;
-    g_sPicHeight = 376;
+    g_sOrigin.x = 32;
+    g_sOrigin.y = 8;
+    g_sPicSize.x = 576;
+    g_sPicSize.y = 376;
 
     EraseBGBlitWEffects(eNoEffect);
 
@@ -6074,10 +6071,10 @@ int ShowCredits()
 
     Sleep(3000);
 
-    g_iOriginX = 32;
-    g_iOriginY = 8;
-    g_sPicWidth = 576;
-    g_sPicHeight = 376;
+    g_sOrigin.x = 32;
+    g_sOrigin.y = 8;
+    g_sPicSize.x = 576;
+    g_sPicSize.y = 376;
 
     EraseBGBlitWEffects(eNoEffect);
 
@@ -6095,10 +6092,10 @@ int ShowCredits()
 
     Sleep(3000);
 
-    g_iOriginX = 32;
-    g_iOriginY = 8;
-    g_sPicWidth = 576;
-    g_sPicHeight = 376;
+    g_sOrigin.x = 32;
+    g_sOrigin.y = 8;
+    g_sPicSize.x = 576;
+    g_sPicSize.y = 376;
 
     EraseBGBlitWEffects(eNoEffect);
 
@@ -6116,10 +6113,10 @@ int ShowCredits()
 
     Sleep(3000u);
 
-    g_iOriginX = 32;
-    g_iOriginY = 8;
-    g_sPicWidth = 576;
-    g_sPicHeight = 376;
+    g_sOrigin.x = 32;
+    g_sOrigin.y = 8;
+    g_sPicSize.x = 576;
+    g_sPicSize.y = 376;
 
     EraseBGBlitWEffects(eNoEffect);
 
@@ -6137,10 +6134,10 @@ int ShowCredits()
 
     Sleep(3000);
 
-    g_iOriginX = 32;
-    g_iOriginY = 8;
-    g_sPicWidth = 576;
-    g_sPicHeight = 376;
+    g_sOrigin.x = 32;
+    g_sOrigin.y = 8;
+    g_sPicSize.x = 576;
+    g_sPicSize.y = 376;
 
     EraseBGBlitWEffects(eNoEffect);
 
@@ -6158,10 +6155,10 @@ int ShowCredits()
 
     Sleep(3000);
 
-    g_iOriginX = 32;
-    g_iOriginY = 8;
-    g_sPicWidth = 576;
-    g_sPicHeight = 376;
+    g_sOrigin.x = 32;
+    g_sOrigin.y = 8;
+    g_sPicSize.x = 576;
+    g_sPicSize.y = 376;
 
     EraseBGBlitWEffects(eNoEffect);
 
@@ -6179,10 +6176,10 @@ int ShowCredits()
 
     Sleep(3000);
 
-    g_iOriginX = 32;
-    g_iOriginY = 8;
-    g_sPicWidth = 576;
-    g_sPicHeight = 376;
+    g_sOrigin.x = 32;
+    g_sOrigin.y = 8;
+    g_sPicSize.x = 576;
+    g_sPicSize.y = 376;
 
     EraseBGBlitWEffects(eNoEffect);
 
@@ -6200,8 +6197,8 @@ int ShowCredits()
 
     Sleep(3000);
 
-    g_iOriginX = 32;
-    g_iOriginY = 238;
+    g_sOrigin.x = 32;
+    g_sOrigin.y = 238;
 
     EraseBGBlitWEffects(eNoEffect);
 
@@ -6213,8 +6210,8 @@ int ShowCredits()
 
     Sleep(3000);
 
-    g_iOriginX = 32;
-    g_iOriginY = 238;
+    g_sOrigin.x = 32;
+    g_sOrigin.y = 238;
 
     EraseBGBlitWEffects(eNoEffect);
 
@@ -6226,8 +6223,8 @@ int ShowCredits()
 
     Sleep(3000);
 
-    g_iOriginX = 32;
-    g_iOriginY = 238;
+    g_sOrigin.x = 32;
+    g_sOrigin.y = 238;
 
     EraseBGBlitWEffects(eNoEffect);
 
@@ -6239,10 +6236,10 @@ int ShowCredits()
 
     Sleep(3000);
 
-    g_iOriginX = 32;
-    g_iOriginY = 8;
-    g_sPicWidth = 576;
-    g_sPicHeight = 376;
+    g_sOrigin.x = 32;
+    g_sOrigin.y = 8;
+    g_sPicSize.x = 576;
+    g_sPicSize.y = 376;
     EraseBGBlitWEffects(eNoEffect);
 
     Sleep(500);
@@ -6259,8 +6256,8 @@ int ShowCredits()
 
     Sleep(3000);
 
-    g_iOriginX = 32;
-    g_iOriginY = 238;
+    g_sOrigin.x = 32;
+    g_sOrigin.y = 238;
 
     EraseBGBlitWEffects(eNoEffect);
 
@@ -6272,8 +6269,8 @@ int ShowCredits()
 
     Sleep(3000);
 
-    g_iOriginX = 32;
-    g_iOriginY = 238;
+    g_sOrigin.x = 32;
+    g_sOrigin.y = 238;
 
     EraseBGBlitWEffects(eNoEffect);
 
@@ -6285,8 +6282,8 @@ int ShowCredits()
 
     Sleep(3000);
 
-    g_iOriginX = 32;
-    g_iOriginY = 238;
+    g_sOrigin.x = 32;
+    g_sOrigin.y = 238;
 
     EraseBGBlitWEffects(eNoEffect);
 
@@ -6298,10 +6295,10 @@ int ShowCredits()
 
     Sleep(3000);
 
-    g_iOriginX = 32;
-    g_iOriginY = 8;
-    g_sPicWidth = 576;
-    g_sPicHeight = 376;
+    g_sOrigin.x = 32;
+    g_sOrigin.y = 8;
+    g_sPicSize.x = 576;
+    g_sPicSize.y = 376;
 
     EraseBGBlitWEffects(eNoEffect);
 
