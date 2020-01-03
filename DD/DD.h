@@ -9,6 +9,9 @@
 #define GET_DWORD(pBase, lOffset)       (*(DWORD *)((BYTE *)(pBase) + (lOffset)))
 #define GET_STRING(pBase, lOffset)      ((char *)(pBase) + (lOffset))
 
+#define WINDOW_WIDTH    640
+#define WINDOW_HEIGHT   480
+
 #define EMPTY_MASK  0x0000
 #define UP_MASK     0x0011
 #define DOWN_MASK   0x0088

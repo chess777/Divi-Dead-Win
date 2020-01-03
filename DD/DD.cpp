@@ -5,16 +5,12 @@
 #include "DD.h"
 
 // Global Variables:
-HINSTANCE   g_hInst;                                    // Current instance
-const TCHAR g_cptClassName[] = _T("DIVI-DEAD_GAME");        // The title bar text
-const TCHAR g_cptWindowName[] = _T("DIVI-DEAD C'sWARE");    // The main window class name
-HMENU       g_hMenu;            // The main window menu handle
-int         g_iScreenX;         // Display size X
-int         g_iScreenY;         // Display size Y
-int         g_iWindowSizeX = 640;       // Window size X
-int         g_iWindowSizeY = 480;       // Window size Y
-UINT        g_uiWindowStyle;    // Window style
-bool        g_bWindowModeReal;
+const TCHAR g_cptClassName[] = _T("DIVI-DEAD_GAME");        // The main window class name
+const TCHAR g_cptWindowName[] = _T("DIVI-DEAD C'sWARE");    // The title bar text
+HMENU       g_hMenu;                                        // The main window menu handle
+int         g_iDisplayWidth;                                // Display size X
+int         g_iDisplayHeight;                               // Display size Y
+bool        g_bIsWindowMode;
 bool        g_bWindowModeSelected;
 bool        g_bScreenUpdatedOrMouseMoved;
 bool        g_bResetMenuSelection;
@@ -24,14 +20,9 @@ HDC         g_hMainDc;
 HDC         g_hDcBuffer1;
 HDC         g_hDcBuffer2;
 HDC         g_hDcMenuGfx;
-HBITMAP     g_hBuf1Bitmap;
-HBITMAP     g_hBuf2Bitmap;
-HBITMAP     g_hMenuGFX_Bitmap;
 HBITMAP     g_hOldBuf1Bitmap;
 HBITMAP     g_hOldBuf2Bitmap;
 HBITMAP     g_hOld_MenuGFX_Bitmap;
-bool        g_bPaletteSupported;
-int         g_iScreenDepth;
 UINT        g_uMIDIDevsCnt;
 UINT        g_uWaveDevsCnt;
 bool        g_bSoundEnabled;
@@ -51,7 +42,6 @@ SaveFileState   g_sGameState;
 SysFileStruc    g_sSysFile;
 HANDLE          g_hFile;
 DWORD           g_dwNumberOfBytesRead;
-DWORD           g_ulTimeStamp;
 TCHAR           g_ptStartScriptFile[64] = _T("AASTART");
 WORD            g_wKeyCommand;
 WORD            g_sPrevKeyCommand;
@@ -64,15 +54,7 @@ ArhiveFileEntry *g_pcSGArhiveFileTable;
 TCHAR           g_pcWVFileName[MAX_PATH];
 ArhiveHdr       g_pcWVFileHdr;
 ArhiveFileEntry *g_pcWVArhiveFileTable;
-WORD            g_uiArhiveEntryCount;
 ArhiveFileEntry g_pcFLIST[FLIST_ENTRY_COUNT];
-char            g_pcHDR[16];
-DWORD           g_lDistanceToMove;
-DWORD           g_dwNumberOfBytesToRead;
-ArhiveFileEntry g_pcFileToFind;
-PackedFileHdr   g_sPackedFileHdr;
-BYTE            g_pbSlideWinBuf[4096];
-BYTE            *g_pbUnpackedFileEndPos;
 short           g_sPicWidth = 640;
 short           g_sPicHeight = 480;
 int             g_iOriginX;
@@ -84,7 +66,7 @@ OFFSET_STRUCT   g_psPicOriginPositions[6] = {
     640, 480,       // This part goes to the right and bottom from visible area
 };
 
-POINT   g_sTextWindowPos = { 112, 398 };
+POINT           g_sTextWindowPos = { 112, 398 };
 
 int             g_iX;
 int             g_iY;
@@ -165,7 +147,7 @@ TCHAR               g_ptSaveLoadMenuStrings[11][25];
 
 short               g_iSelectedMenuItem = -1;
 int                 g_iNewPosInScript;
-POINT               g_sPoint;
+POINT               g_sCursorPos;
 short               g_sMenuLength;
 TCHAR               g_pptMenuStrings[MAX_MENU_STRINGS][MAX_MENU_STRING_LEN];
 int                 g_piMenuStringLengths[MAX_MENU_STRINGS];
@@ -1514,6 +1496,7 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
     TCHAR   ptString[512];
     TCHAR   ptMsgName[32];
     DWORD   dwBytesWritten;
+    DWORD   dwWindowStyle;
 
     hLogFile1 = CreateFile(_T("Msg1.log"), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hLogFile1 == INVALID_HANDLE_VALUE){
@@ -1535,20 +1518,20 @@ int WINAPI _tWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
         g_hMenu = LoadMenu(hInstance, MAKEINTRESOURCE(_MENU1));
 #endif
 
-        g_iScreenX = GetSystemMetrics(SM_CXSCREEN);
-        g_iScreenY = GetSystemMetrics(SM_CYSCREEN);
-        if (g_iScreenX > 640 || g_iScreenY > 480){
-            g_uiWindowStyle = WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-            g_bWindowModeReal = true;
+        g_iDisplayWidth = GetSystemMetrics(SM_CXSCREEN);
+        g_iDisplayHeight = GetSystemMetrics(SM_CYSCREEN);
+        if (g_iDisplayWidth > 640 || g_iDisplayHeight > 480){
+            dwWindowStyle = WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+            g_bIsWindowMode = true;
             g_bWindowModeSelected = true;
         }
         else{
-            g_uiWindowStyle = WS_POPUP;
-            g_bWindowModeReal = false;
+            dwWindowStyle = WS_POPUP;
+            g_bIsWindowMode = false;
             g_bWindowModeSelected = false;
         }
 
-        g_hMainWindow = CreateWindowEx(WS_EX_LEFT, g_cptClassName, g_cptWindowName, g_uiWindowStyle,
+        g_hMainWindow = CreateWindowExW(WS_EX_LEFT, g_cptClassName, g_cptWindowName, dwWindowStyle,
             CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, NULL, hInstance, NULL);
         if (!g_hMainWindow){
             return 0;
@@ -1598,6 +1581,9 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
     HBRUSH      hBlackBrush;
     RECT        sRect;
     HWND        hDesktopHWND;
+    HDC         hDc;
+    bool        bPaletteSupported;
+    int         iScreenDepth;
 
 #ifdef _DEBUG
     LARGE_INTEGER   liFreq;
@@ -1619,29 +1605,29 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
     switch (uiMsg){
     case WM_PAINT:
         BeginPaint(hWND, &sPaint);
-        EndPaint(hWND, &sPaint);
         if (!g_bShowingFullScrMenu){
-            BitBlt(g_hMainDc, 0, 0, g_iWindowSizeX, g_iWindowSizeY, g_hDcBuffer1, 0, 0, SRCCOPY);
+            BitBlt(g_hMainDc, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, g_hDcBuffer1, 0, 0, SRCCOPY);
             g_bScreenUpdatedOrMouseMoved = true;
             g_bResetMenuSelection = true;
         }
+		EndPaint(hWND, &sPaint);
         break;
 
     case WM_CREATE:
-        HDC hDc = GetDC(hWND);
-        g_bPaletteSupported = (GetDeviceCaps(hDc, RASTERCAPS) & RC_PALETTE) != FALSE;
-        g_iScreenDepth = GetDeviceCaps(hDc, BITSPIXEL);
+        hDc = GetDC(hWND);
+        bPaletteSupported = (GetDeviceCaps(hDc, RASTERCAPS) & RC_PALETTE) != FALSE;
+        iScreenDepth = GetDeviceCaps(hDc, BITSPIXEL);
         ReleaseDC(hWND, hDc);
         if (InitializeGame(hWND)){
             ChangeDisplaySettings(NULL, 0);
             DestroyWindow(hWND);
             break;
         }
-        SetWindowSize(hWND, g_iWindowSizeX, g_iWindowSizeY);
+        SetWindowSize(hWND, WINDOW_WIDTH, WINDOW_HEIGHT);
         CenterTheWindow(hWND);
         ShowWindow(hWND, SW_SHOWNORMAL);
         UpdateWindow(hWND);
-        if (g_iScreenDepth <= 8){
+        if (iScreenDepth <= 8){
             MessageBox(hWND, _T("This game cannot run in 256 colors"), _T("DIVI-DEAD C'sWARE"), MB_OK);
             g_wKeyCommand = EMPTY_MASK;
             g_sPrevKeyCommand = EMPTY_MASK;
@@ -1703,15 +1689,15 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
             TerminateThread(g_hThread, 0);
         }
         ShutdownGame();
-        g_bWindowModeSelected = false;                      // Force next call to switch to window mode
-        SendMessage(hWND, WM_SWITCH_SCREEN_MODE, 0, 0);     // Switch display mode
+        g_bWindowModeSelected = false;                          // Force next call to switch to window mode
+        SendMessage(hWND, WM_SWITCH_SCREEN_MODE, 0, 0);         // Switch display mode
         Sleep(100u);
         PostQuitMessage(0);
         break;
 
     case WM_ACTIVATE:
-        if (wParam != WA_INACTIVE){
-            if (!g_bWindowModeReal){
+        if (wParam == WA_INACTIVE){                             // Deactivating window
+            if (!g_bIsWindowMode){
                 g_bShowingFullScrMenu = false;
                 SetMenu(hWND, NULL);
                 SetupOrigin(hWND, g_hMainDc);
@@ -1721,7 +1707,7 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
             g_bKeyCommand2 = 0;
             break;
         }
-        if (wParam > WA_INACTIVE && wParam <= WA_CLICKACTIVE){  // Window is active
+        if (wParam > WA_INACTIVE && wParam <= WA_CLICKACTIVE){  // Activating window
             GetClientRect(hWND, &sRect);
             InvalidateRect(hWND, &sRect, FALSE);
             if (g_bVideoIsPlaying){
@@ -1737,9 +1723,9 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
 
     case WM_DISPLAYCHANGE:
         if (!g_bDisplayModeChanged){
-            g_iScreenX = GetSystemMetrics(SM_CXSCREEN);
-            g_iScreenY = GetSystemMetrics(SM_CYSCREEN);
-            if (g_iScreenX > GAME_SCREEN_SIZE_X || g_iScreenY > GAME_SCREEN_SIZE_Y){
+            g_iDisplayWidth = GetSystemMetrics(SM_CXSCREEN);
+            g_iDisplayHeight = GetSystemMetrics(SM_CYSCREEN);
+            if (g_iDisplayWidth > GAME_SCREEN_SIZE_X || g_iDisplayHeight > GAME_SCREEN_SIZE_Y){
                 g_bWindowModeSelected = true;
             }
             else{
@@ -1749,12 +1735,11 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
         g_bDisplayModeChanged = false;
         if (g_bWindowModeSelected){
             g_bShowingFullScrMenu = false;
-            g_bWindowModeReal = true;
-            g_uiWindowStyle = WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-            SetWindowLong(hWND, GWL_STYLE, g_uiWindowStyle);
+            g_bIsWindowMode = true;
+            SetWindowLong(hWND, GWL_STYLE, WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX);
             SetMenu(hWND, g_hMenu);
             SetupOrigin(hWND, g_hMainDc);
-            SetWindowSize(hWND, g_iWindowSizeX, g_iWindowSizeY);
+            SetWindowSize(hWND, WINDOW_WIDTH, WINDOW_HEIGHT);
             CenterTheWindow(hWND);
             ShowWindow(hWND, SW_SHOWNORMAL);
             UpdateWindow(hWND);
@@ -1765,12 +1750,11 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
             UpdateWindow(hDesktopHWND);
         }
         else{
-            g_bWindowModeReal = false;
-            g_uiWindowStyle = WS_POPUP;
-            SetWindowLong(hWND, GWL_STYLE, g_uiWindowStyle);
+            g_bIsWindowMode = false;
+            SetWindowLong(hWND, GWL_STYLE, WS_POPUP);
             ShowWindow(hWND, SW_SHOWMAXIMIZED);
             UpdateWindow(hWND);
-            SetWindowSize(hWND, g_iWindowSizeX, g_iWindowSizeY);
+            SetWindowSize(hWND, WINDOW_WIDTH, WINDOW_HEIGHT);
             SetMenu(hWND, NULL);
             SetupOrigin(hWND, g_hMainDc);
         }
@@ -1837,7 +1821,7 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
             g_iMousePosX = LOWORD(lParam);
             g_iMousePosY = HIWORD(lParam);
             g_bScreenUpdatedOrMouseMoved = true;
-            if (!g_bWindowModeReal){
+            if (!g_bIsWindowMode){
                 if (g_bShowingFullScrMenu){
                     g_bShowingFullScrMenu = false;
                     SetMenu(hWND, NULL);
@@ -1876,7 +1860,7 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
         return DefWindowProc(hWND, WM_SYSCOMMAND, wParam, lParam);
 
     case WM_SHOW_SCREEN_MODE_DIALOG:
-        if (!g_bWindowModeReal){
+        if (!g_bIsWindowMode){
             g_bShowingFullScrMenu = false;
             SetMenu(hWND, NULL);
             SetupOrigin(hWND, g_hMainDc);
@@ -1997,7 +1981,7 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
     case WM_COMMAND:
         switch (wParam){
         case IDM_ABOUT_HELP:        //0x3D4u:   // Show help
-            if (!g_bWindowModeReal){
+            if (!g_bIsWindowMode){
                 g_bShowingFullScrMenu = false;
                 SetMenu(hWND, NULL);
                 SetupOrigin(hWND, g_hMainDc);
@@ -2018,7 +2002,7 @@ LRESULT CALLBACK WndProc(HWND hWND, UINT uiMsg, WPARAM wParam, LPARAM lParam)
             break;
 
         case IDM_FILE_QIUT:         //0x3E7u:   // Menu item File/Quit
-            if (!g_bWindowModeReal){
+            if (!g_bIsWindowMode){
                 g_bShowingFullScrMenu = false;
                 SetMenu(hWND, NULL);
                 SetupOrigin(hWND, g_hMainDc);
@@ -2073,25 +2057,25 @@ int InitializeGame(HWND hWnd)
     g_hMainDc = GetWindowDC(hWnd);
     SetupOrigin(hWnd, g_hMainDc);
 
-    g_hBuf1Bitmap = CreateCompatibleBitmap(g_hMainDc, g_iWindowSizeX, g_iWindowSizeY);
+    HBITMAP hBuf1Bitmap = CreateCompatibleBitmap(g_hMainDc, WINDOW_WIDTH, WINDOW_HEIGHT);
     g_hDcBuffer1 = CreateCompatibleDC(g_hMainDc);
-    g_hOldBuf1Bitmap = (HBITMAP)SelectObject(g_hDcBuffer1, g_hBuf1Bitmap);
+    g_hOldBuf1Bitmap = (HBITMAP)SelectObject(g_hDcBuffer1, hBuf1Bitmap);
 
-    g_hBuf2Bitmap = CreateCompatibleBitmap(g_hMainDc, 2 * g_iWindowSizeX, 2 * g_iWindowSizeY);
+    HBITMAP hBuf2Bitmap = CreateCompatibleBitmap(g_hMainDc, 2 * WINDOW_WIDTH, 2 * WINDOW_HEIGHT);
     g_hDcBuffer2 = CreateCompatibleDC(g_hMainDc);
-    g_hOldBuf2Bitmap = (HBITMAP)SelectObject(g_hDcBuffer2, g_hBuf2Bitmap);
+    g_hOldBuf2Bitmap = (HBITMAP)SelectObject(g_hDcBuffer2, hBuf2Bitmap);
 
-    g_hMenuGFX_Bitmap = CreateCompatibleBitmap(g_hMainDc, g_iWindowSizeX, g_iWindowSizeY);
+    HBITMAP hMenuGFX_Bitmap = CreateCompatibleBitmap(g_hMainDc, WINDOW_WIDTH, WINDOW_HEIGHT);
     g_hDcMenuGfx = CreateCompatibleDC(g_hMainDc);
-    g_hOld_MenuGFX_Bitmap = (HBITMAP)SelectObject(g_hDcMenuGfx, g_hMenuGFX_Bitmap);
+    g_hOld_MenuGFX_Bitmap = (HBITMAP)SelectObject(g_hDcMenuGfx, hMenuGFX_Bitmap);
 
     SetStretchBltMode(g_hMainDc, COLORONCOLOR);
     SetStretchBltMode(g_hDcBuffer1, COLORONCOLOR);
     SetStretchBltMode(g_hDcBuffer2, COLORONCOLOR);
 
-    PatBlt(g_hMainDc, 0, 0, g_iWindowSizeX, g_iWindowSizeY, BLACKNESS);
-    PatBlt(g_hDcBuffer1, 0, 0, g_iWindowSizeX, g_iWindowSizeY, BLACKNESS);
-    PatBlt(g_hDcBuffer2, 0, 0, g_iWindowSizeX, g_iWindowSizeY, BLACKNESS);
+    PatBlt(g_hMainDc, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, BLACKNESS);
+    PatBlt(g_hDcBuffer1, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, BLACKNESS);
+    PatBlt(g_hDcBuffer2, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, BLACKNESS);
 
     SetTextColor(g_hMainDc, RGB(0, 0, 0));
     SetTextColor(g_hDcBuffer1, RGB(0, 0, 0));
@@ -2739,7 +2723,7 @@ DWORD WINAPI MainGameThreadProc(LPVOID lpParameter)
                 sFlagResult = ProcessInGameMenu();
 
                 if (sFlagResult == 4){  // Exit game
-                    g_bWindowModeSelected = 0;
+                    g_bWindowModeSelected = false;
                     SendMessage(hWnd, WM_SWITCH_SCREEN_MODE /*0x40Au*/, 0, 0);
                     PostMessage(hWnd, WM_DESTROY, 0, 0);
                     ExitThread(0);
@@ -2890,10 +2874,10 @@ DWORD WINAPI MainGameThreadProc(LPVOID lpParameter)
             g_crMenuBGColor = RGB(0, 0, 0);
 
             g_bTrackingMouse = true;
-            g_sPoint.x = g_sTextWindowPos.x - 8;
-            g_sPoint.y = g_sTextWindowPos.y + 4;
-            ClientToScreen(g_hMainWindow, &g_sPoint);
-            SetCursorPos(g_sPoint.x, g_sPoint.y);
+            g_sCursorPos.x = g_sTextWindowPos.x - 8;
+            g_sCursorPos.y = g_sTextWindowPos.y + 4;
+            ClientToScreen(g_hMainWindow, &g_sCursorPos);
+            SetCursorPos(g_sCursorPos.x, g_sCursorPos.y);
             g_iMenuLineHeight = 16;
 
             g_sIntermediateResult = ShowMenuAndWaitForSel(g_sTextWindowPos.x, g_sTextWindowPos.y, 4);
@@ -4500,10 +4484,10 @@ short ProcessInGameMenu()
         BitBltWithTranspColor(g_hDcBuffer1, 48, 23 * iYIdx + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0, 255, 0));
         BitBlt(g_hMainDc, 48, 16, 240, 171, g_hDcBuffer1, 48, 16, SRCCOPY);
 
-        g_sPoint.x = 52;
-        g_sPoint.y = 58;
-        ClientToScreen(g_hMainWindow, &g_sPoint);
-        SetCursorPos(g_sPoint.x, g_sPoint.y);
+        g_sCursorPos.x = 52;
+        g_sCursorPos.y = 58;
+        ClientToScreen(g_hMainWindow, &g_sCursorPos);
+        SetCursorPos(g_sCursorPos.x, g_sCursorPos.y);
         g_sIntermediateResult = ProcessMenu(60, 54, 5, (const TCHAR *)g_pptIngameMenuStrs);
         BitBlt(g_hDcBuffer1, 48, 16, 240, 171, g_hMainDc, 48, 16, SRCCOPY);
 
@@ -4549,10 +4533,10 @@ short ProcessInGameMenu()
             BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0, 255, 0));
             BitBlt(g_hMainDc, 150, 16, 240, 286, g_hDcBuffer1, 150, 16, SRCCOPY);
 
-            g_sPoint.x = 154;
-            g_sPoint.y = 58;
-            ClientToScreen(g_hMainWindow, &g_sPoint);
-            SetCursorPos(g_sPoint.x, g_sPoint.y);
+            g_sCursorPos.x = 154;
+            g_sCursorPos.y = 58;
+            ClientToScreen(g_hMainWindow, &g_sCursorPos);
+            SetCursorPos(g_sCursorPos.x, g_sCursorPos.y);
 
             for (g_iX = 0; g_iX < SAVE_SLOT_COUNT; g_iX++){
                 ConvertMBCSToUni(g_sSysFile.pcSaveNames[g_iX], g_ptSaveLoadMenuStrings[g_iX], 25);
@@ -4588,10 +4572,10 @@ short ProcessInGameMenu()
             BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0, 255, 0));
             BitBlt(g_hMainDc, 150, 16, 240, 286, g_hDcBuffer1, 150, 16, SRCCOPY);
 
-            g_sPoint.x = 154;
-            g_sPoint.y = 58;
-            ClientToScreen(g_hMainWindow, &g_sPoint);
-            SetCursorPos(g_sPoint.x, g_sPoint.y);
+            g_sCursorPos.x = 154;
+            g_sCursorPos.y = 58;
+            ClientToScreen(g_hMainWindow, &g_sCursorPos);
+            SetCursorPos(g_sCursorPos.x, g_sCursorPos.y);
 
             for (g_iX = 0; g_iX < SAVE_SLOT_COUNT; g_iX++){
                 ConvertMBCSToUni(g_sSysFile.pcSaveNames[g_iX], g_ptSaveLoadMenuStrings[g_iX], 25);
@@ -4623,10 +4607,10 @@ short ProcessInGameMenu()
             BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0, 255, 0));
             BitBlt(g_hMainDc, 150, 16, 240, 286, g_hDcBuffer1, 150, 16, SRCCOPY);
 
-            g_sPoint.x = 154;
-            g_sPoint.y = 58;
-            ClientToScreen(g_hMainWindow, &g_sPoint);
-            SetCursorPos(g_sPoint.x, g_sPoint.y);
+            g_sCursorPos.x = 154;
+            g_sCursorPos.y = 58;
+            ClientToScreen(g_hMainWindow, &g_sCursorPos);
+            SetCursorPos(g_sCursorPos.x, g_sCursorPos.y);
 
             _tcsncpy_s(&g_pptConfigMenuStrs[0][15], 10, g_pptOffOn[g_bVoiceEnabled], 9);
             _tcsncpy_s(&g_pptConfigMenuStrs[1][15], 10, g_pptOffOn[g_bSoundEnabled], 9);
@@ -4654,7 +4638,7 @@ short ProcessInGameMenu()
                         MIDIPlaybackCtrl(g_hMainWindow, eMIDI_Stop, NULL, false);
                     }
                 }
-                if (g_sIntermediateResult == 3 && g_iScreenX > 640 && g_iScreenY > 480){
+                if (g_sIntermediateResult == 3 && g_iDisplayWidth > 640 && g_iDisplayHeight > 480){
                     SendMessage(g_hMainWindow, WM_SWITCH_SCREEN_MODE, 0, 0);
                 }
                 RestoreImage(48, 16, 390, 286, 48, 16);
@@ -4677,10 +4661,10 @@ short ProcessInGameMenu()
         BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0, 255, 0));
         BitBlt(g_hMainDc, 150, 16, 240, 102, g_hDcBuffer1, 150, 16, SRCCOPY);
 
-        g_sPoint.x = 154;
-        g_sPoint.y = 58;
-        ClientToScreen(g_hMainWindow, &g_sPoint);
-        SetCursorPos(g_sPoint.x, g_sPoint.y);
+        g_sCursorPos.x = 154;
+        g_sCursorPos.y = 58;
+        ClientToScreen(g_hMainWindow, &g_sCursorPos);
+        SetCursorPos(g_sCursorPos.x, g_sCursorPos.y);
         g_sIntermediateResult = ProcessMenu(162, 54, 10, (const TCHAR *)g_pptYesNoStrs);
 
         if (g_sIntermediateResult != -1){
@@ -4729,10 +4713,10 @@ short ProcessRightMenu()
             BitBltWithTranspColor(g_hDcBuffer1, 48, 23 * iIdx + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));// Draw bottom of the menu
 
             BitBlt(g_hMainDc, 48, 16, 240, 125, g_hDcBuffer1, 48, 16, SRCCOPY);// Blit to main display
-            g_sPoint.x = 52;                           // Move mouse cursor to the menu top
-            g_sPoint.y = 58;
-            ClientToScreen(g_hMainWindow, &g_sPoint);
-            SetCursorPos(g_sPoint.x, g_sPoint.y);
+            g_sCursorPos.x = 52;                           // Move mouse cursor to the menu top
+            g_sCursorPos.y = 58;
+            ClientToScreen(g_hMainWindow, &g_sCursorPos);
+            SetCursorPos(g_sCursorPos.x, g_sCursorPos.y);
             g_sIntermediateResult = ProcessMenu(60, 54, 5, (const TCHAR *)g_pptExtrasMenuStrs);// Show right menu
             BitBlt(g_hDcBuffer1, 48, 16, 240, 125, g_hMainDc, 48, 16, SRCCOPY);
             if (g_sIntermediateResult == -1) // Escape selected
@@ -5492,7 +5476,7 @@ short ShowCGNumberX(short iCGnum)
         ShowCG(_T("OMAKE_0B"));
         break;
     default:
-        for (iIdx = 0; iIdx < sizeof(ArhiveFileEntry); iIdx++){
+        for (iIdx = 0; iIdx < MAX_ARCH_NAME_SIZE; iIdx++){
             if (g_pcFLIST[iCGnum].pcFileName[iIdx] == ' '){
                 break;
             }
@@ -5515,7 +5499,7 @@ short VideoModeAndIntro()
     int iIdx;
     short sKeysPressed;
 
-    if (g_iScreenX > 640 && g_iScreenY > 480)
+    if (g_iDisplayWidth > 640 && g_iDisplayHeight > 480)
     {
         SendMessage(g_hMainWindow, WM_SHOW_SCREEN_MODE_DIALOG/*0x3DEu*/, 0, 0);// Show Dialog2
         if (g_bFullScrModeFromDlg)
@@ -5626,10 +5610,10 @@ short ProcessMainStartMenu()
             BitBltWithTranspColor(g_hDcBuffer1, 48, 23 * iIdx + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));
 
             BitBlt(g_hMainDc, 48, 16, 240, 171, g_hDcBuffer1, 48, 16, SRCCOPY);
-            g_sPoint.x = 52;
-            g_sPoint.y = 58;
-            ClientToScreen(g_hMainWindow, &g_sPoint);
-            SetCursorPos(g_sPoint.x, g_sPoint.y);
+            g_sCursorPos.x = 52;
+            g_sCursorPos.y = 58;
+            ClientToScreen(g_hMainWindow, &g_sCursorPos);
+            SetCursorPos(g_sCursorPos.x, g_sCursorPos.y);
 
             g_sIntermediateResult = ProcessMenu(60, 54, 5, (const TCHAR *)g_pptStartMenuStrs);
             BitBlt(g_hDcBuffer1, 48, 16, 240, 171, g_hMainDc, 48, 16, SRCCOPY);
@@ -5649,10 +5633,10 @@ short ProcessMainStartMenu()
                 }
                 BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));
                 BitBlt(g_hMainDc, 150, 16, 240, 286, g_hDcBuffer1, 150, 16, SRCCOPY);
-                g_sPoint.x = 154;
-                g_sPoint.y = 58;
-                ClientToScreen(g_hMainWindow, &g_sPoint);
-                SetCursorPos(g_sPoint.x, g_sPoint.y);
+                g_sCursorPos.x = 154;
+                g_sCursorPos.y = 58;
+                ClientToScreen(g_hMainWindow, &g_sCursorPos);
+                SetCursorPos(g_sCursorPos.x, g_sCursorPos.y);
 
                 for (g_iX = 0; g_iX < SAVE_SLOT_COUNT; g_iX++){
                     ConvertMBCSToUni(g_sSysFile.pcSaveNames[g_iX], g_ptSaveLoadMenuStrings[g_iX], 25);
@@ -5682,10 +5666,10 @@ short ProcessMainStartMenu()
                 }
                 BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));
                 BitBlt(g_hMainDc, 150, 16, 240, 286, g_hDcBuffer1, 150, 16, SRCCOPY);
-                g_sPoint.x = 154;
-                g_sPoint.y = 58;
-                ClientToScreen(g_hMainWindow, &g_sPoint);
-                SetCursorPos(g_sPoint.x, g_sPoint.y);
+                g_sCursorPos.x = 154;
+                g_sCursorPos.y = 58;
+                ClientToScreen(g_hMainWindow, &g_sCursorPos);
+                SetCursorPos(g_sCursorPos.x, g_sCursorPos.y);
                 _tcsncpy_s(&g_pptConfigMenuStrs[0][15], 10, g_pptOffOn[g_bVoiceEnabled], 9); // - Cripples data
                 _tcsncpy_s(&g_pptConfigMenuStrs[1][15], 10, g_pptOffOn[g_bSoundEnabled], 9);
                 _tcsncpy_s(&g_pptConfigMenuStrs[2][15], 10, g_pptOffOn[g_bBgmEnabled], 9);
@@ -5714,7 +5698,7 @@ short ProcessMainStartMenu()
                             MIDIPlaybackCtrl(g_hMainWindow, eMIDI_Stop, NULL, false);
                         }
                     }
-                    if (g_sIntermediateResult == 3 && g_iScreenX > 640 && g_iScreenY > 480)// Toggle Fullscreen
+                    if (g_sIntermediateResult == 3 && g_iDisplayWidth > 640 && g_iDisplayHeight > 480)// Toggle Fullscreen
                         SendMessage(g_hMainWindow, WM_SWITCH_SCREEN_MODE/*0x40Au*/, 0, 0);
                     RestoreImage(48, 16, 390, 286, 48, 16);
                     g_wKeyCommand = EMPTY_MASK;
@@ -5732,10 +5716,10 @@ short ProcessMainStartMenu()
                 }
                 BitBltWithTranspColor(g_hDcBuffer1, 150, 23 * g_iX + 52, 240, 20, g_hDcMenuGfx, 0, 60, RGB(0x00, 0xFF, 0x00));
                 BitBlt(g_hMainDc, 150, 16, 240, 102, g_hDcBuffer1, 150, 16, SRCCOPY);
-                g_sPoint.x = 154;
-                g_sPoint.y = 58;
-                ClientToScreen(g_hMainWindow, &g_sPoint);
-                SetCursorPos(g_sPoint.x, g_sPoint.y);
+                g_sCursorPos.x = 154;
+                g_sCursorPos.y = 58;
+                ClientToScreen(g_hMainWindow, &g_sCursorPos);
+                SetCursorPos(g_sCursorPos.x, g_sCursorPos.y);
                 g_sIntermediateResult = ProcessMenu(162, 54, 10, (const TCHAR *)g_pptYesNoStrs);
                 if (g_sIntermediateResult == -1)
                 {
@@ -5905,18 +5889,18 @@ short CGHitDisplay()
     iSeenCGCount = 0;
     do
     {
-        if (pcFLIST[0].pcFileName[0] == _T('/'))
+        if (pcFLIST->pcFileName[0] == _T('/'))
             break;
-        if (pcFLIST[0].pcFileName[0] != _T(' '))
+        if (pcFLIST->pcFileName[0] != _T(' '))
         {
-            if (pcFLIST[0].pcFileName[0] != _T('O'))
+            if (pcFLIST->pcFileName[0] != _T('O'))
             {
                 iCGCount++;
                 if (*psCGSeen)
                     iSeenCGCount++;
             }
         }
-        pcFLIST += sizeof(ArhiveFileEntry);
+        pcFLIST++;
         psCGSeen++;
     } while (pcFLIST - g_pcFLIST < FLIST_ENTRY_COUNT * sizeof(ArhiveFileEntry));
     if (iCGCount)
@@ -5937,7 +5921,7 @@ int MarkCGAsSeen(const char *pcFileToFind)
     char            pcNameToFind[MAX_ARCH_NAME_SIZE];
 
     memcpy(pcNameToFind, "            ", MAX_ARCH_NAME_SIZE);
-
+    
     for (iIdx = 0; iIdx < MAX_ARCH_NAME_SIZE; iIdx++){
         if (pcFileToFind[iIdx] == '.' || pcFileToFind[iIdx] == 0){
             break;
